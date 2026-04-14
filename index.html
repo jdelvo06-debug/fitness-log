@@ -420,7 +420,7 @@
             }
         }
 
-        // Storage
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx1F4KStHX9MuE2OmzUYs_LQDYkqLkZyjPM3P0zmtsutQxGB-OFJ1uNQZCYQWFaF5pc/exec';
         function saveToStorage() {
             localStorage.setItem('fitnessLogWeights', JSON.stringify(weightEntries));
             localStorage.setItem('fitnessLogHistory', JSON.stringify(workoutHistory));
@@ -444,7 +444,7 @@
 
         // Sync (placeholder)
         function syncData() {
-            const url = localStorage.getItem('appsScriptUrl');
+            const url = APPS_SCRIPT_URL;
             if (!url) {
                 alert('Please configure Google Sheets URL in settings (⚙️)');
                 showSettings();
