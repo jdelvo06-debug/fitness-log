@@ -221,9 +221,13 @@
                 btn.classList.remove('bg-blue-600');
                 btn.classList.add('bg-gray-700');
             });
-            event.target.classList.remove('bg-gray-700');
-            event.target.classList.add('bg-blue-600');
-            document.getElementById('split-title').textContent = `🫸 ${split.toUpperCase()} EXERCISES`.replace('PUSH', '🫸 Push').replace('PULL', '🫷 Pull').replace('UPPER', '💪 Upper').replace('LEGS', '🦵 Legs');
+            const activeBtn = document.querySelector(`button[onclick="selectSplit('${split}')"]`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-gray-700');
+                activeBtn.classList.add('bg-blue-600');
+            }
+            const titles = { push: '🫸 Push', pull: '🫷 Pull', upper: '💪 Upper', legs: '🦵 Legs' };
+            document.getElementById('split-title').textContent = `${titles[split]} EXERCISES`;
             renderExercises();
         }
 
@@ -253,11 +257,12 @@
                         <h4 class="font-bold">${ex}</h4>
                         <button onclick="openSwapModal(${idx})" class="text-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500">↻ Swap</button>
                     </div>
-                    <div class="space-y-2">
+                    <div class="space-y-2 sets-container">
                         <div class="flex gap-2">
                             <input type="number" placeholder="lbs" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight">
                             <input type="number" placeholder="reps" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps">
-                            <button onclick="logSet(this, ${idx})" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
+                            <button onclick="logSet(this)" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
+                            <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm">+ Set</button>
                         </div>
                     </div>
                 </div>
@@ -305,6 +310,41 @@
             document.getElementById('swap-modal').classList.add('hidden');
         }
 
+        // Log a set
+        function logSet(btn) {
+            const row = btn.closest('.flex');
+            const weightInput = row.querySelector('.set-weight');
+            const repsInput = row.querySelector('.set-reps');
+            const weight = weightInput.value;
+            const reps = repsInput.value;
+            
+            if (!weight || !reps) return alert('Enter weight and reps');
+            
+            // Visual feedback
+            btn.textContent = '✓';
+            btn.classList.remove('bg-blue-600');
+            btn.classList.add('bg-green-600');
+            weightInput.disabled = true;
+            repsInput.disabled = true;
+            
+            // Add another set row
+            addSet(btn);
+        }
+        
+        // Add a new set row
+        function addSet(btn) {
+            const container = btn.closest('.sets-container');
+            const newRow = document.createElement('div');
+            newRow.className = 'flex gap-2';
+            newRow.innerHTML = `
+                <input type="number" placeholder="lbs" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight">
+                <input type="number" placeholder="reps" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps">
+                <button onclick="logSet(this)" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
+                <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm">+ Set</button>
+            `;
+            container.appendChild(newRow);
+        }
+
         // Weight Logging
         function logWeight() {
             const date = document.getElementById('weight-date').value;
@@ -322,8 +362,10 @@
             // Save to Google Sheets
             fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                mode: 'no-cors',
                 body: JSON.stringify({ action: 'logWeight', date, weight })
-            }).catch(err => console.error('Sheets save error:', err));
+            }).then(() => console.log('Weight saved to Sheets')).catch(err => console.error('Sheets save error:', err));
         }
 
         function renderWeightEntries() {
@@ -348,8 +390,22 @@
             const type = document.getElementById('cardio-type').value;
             const distance = document.getElementById('cardio-distance').value;
             const time = document.getElementById('cardio-time').value;
+            const date = new Date().toISOString().split('T')[0];
             
             if (!time) return alert('Enter time');
+            
+            const cardioEntry = { date, type, distance: distance || 0, time };
+            let cardioHistory = JSON.parse(localStorage.getItem('fitnessLogCardio') || '[]');
+            cardioHistory.unshift(cardioEntry);
+            localStorage.setItem('fitnessLogCardio', JSON.stringify(cardioHistory));
+            
+            // Save to Sheets
+            fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                mode: 'no-cors',
+                body: JSON.stringify({ action: 'logCardio', ...cardioEntry })
+            }).catch(err => console.error('Cardio save error:', err));
             
             alert(`Cardio logged: ${type} - ${distance || 0} mi in ${time} min`);
             document.getElementById('cardio-distance').value = '';
@@ -377,9 +433,9 @@
             document.querySelectorAll('#exercises-list > div').forEach(div => {
                 const name = div.getAttribute('data-exercise');
                 const sets = [];
-                div.querySelectorAll('.set-weight').forEach((input, i) => {
-                    const weight = input.value;
-                    const reps = div.querySelectorAll('.set-reps')[i]?.value;
+                div.querySelectorAll('.sets-container .flex').forEach(row => {
+                    const weight = row.querySelector('.set-weight').value;
+                    const reps = row.querySelector('.set-reps').value;
                     if (weight && reps) sets.push({ weight, reps });
                 });
                 if (sets.length) exercises.push({ name, sets });
@@ -399,8 +455,10 @@
                 // Save to Google Sheets
                 fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    mode: 'no-cors',
                     body: JSON.stringify({ action: 'logWorkout', workout })
-                }).catch(err => console.error('Sheets save error:', err));
+                }).then(() => console.log('Workout saved to Sheets')).catch(err => console.error('Sheets save error:', err));
             }
 
             workoutStartTime = null;
