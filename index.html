@@ -52,11 +52,17 @@
                     </div>
                     <div class="text-center">
                         <div class="text-gray-400">Target</div>
-                        <div class="text-3xl font-bold" id="target-weight">—</div>
+                        <div class="text-3xl font-bold" id="target-weight">165</div>
                     </div>
                     <div class="text-center">
                         <div class="text-gray-400">To Go</div>
-                        <div class="text-3xl font-bold" id="weight-to-go">—</div>
+                        <div class="text-3xl font-bold" id="weight-to-go">0</div>
+                    </div>
+                </div>
+                <div class="flex gap-2 mb-4 flex-wrap items-end">
+                    <div class="flex-1 min-w-[100px]">
+                        <label class="text-xs text-gray-400">Target (lbs)</label>
+                        <input type="number" id="target-weight-input" placeholder="165" class="w-full bg-gray-700 rounded px-3 py-2" oninput="updateTarget()">
                     </div>
                 </div>
                 <div class="flex gap-2 mb-4 flex-wrap">
@@ -109,6 +115,7 @@
             <div id="exercise-container" class="bg-gray-800 rounded-lg p-4">
                 <h3 class="font-bold mb-4" id="split-title">🫸 PUSH EXERCISES</h3>
                 <div id="exercises-list" class="space-y-4"></div>
+                <button onclick="addExercise()" class="mt-4 w-full py-2 bg-gray-700 rounded-lg hover:bg-gray-600 text-center font-bold">+ Add Exercise</button>
             </div>
 
             <!-- Workout Controls -->
@@ -119,6 +126,15 @@
                             <button onclick="startWorkout()" class="btn-sm px-3 py-2 bg-green-600 rounded hover:bg-green-700 whitespace-nowrap">▶ Start</button>
                             <button onclick="endWorkout()" class="btn-sm px-3 py-2 bg-red-600 rounded hover:bg-red-700 whitespace-nowrap">✓ End</button>
                         </div>
+                    </div>
+                    <!-- Rest Timer -->
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="text-gray-400">Rest:</span>
+                        <button onclick="startRestTimer(90)" class="btn-sm px-2 py-1 bg-yellow-600 rounded hover:bg-yellow-700 text-sm">90s</button>
+                        <button onclick="startRestTimer(60)" class="btn-sm px-2 py-1 bg-yellow-600 rounded hover:bg-yellow-700 text-sm">60s</button>
+                        <button onclick="startRestTimer(45)" class="btn-sm px-2 py-1 bg-yellow-600 rounded hover:bg-yellow-700 text-sm">45s</button>
+                        <span id="rest-timer" class="text-lg font-bold text-yellow-400 hidden">1:30</span>
+                        <button onclick="stopRestTimer()" id="rest-stop" class="btn-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm hidden">✕</button>
                     </div>
             </div>
         </div>
@@ -196,11 +212,19 @@
         let currentSwapIndex = null;
         let weightEntries = [];
         let workoutHistory = [];
+        let targetWeight = 165;
+        let restTimerInterval = null;
+        let restTimeLeft = 0;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('weight-date').valueAsDate = new Date();
+            const savedTarget = localStorage.getItem('fitnessLogTargetWeight');
+            if (savedTarget) targetWeight = parseFloat(savedTarget);
+            document.getElementById('target-weight').textContent = targetWeight;
+            document.getElementById('target-weight-input').value = targetWeight;
             loadFromStorage();
+            updateToGo();
             renderExercises();
         });
 
@@ -248,7 +272,7 @@
                 push: ['Bench Press', 'Incline DB Press', 'Cable Fly', 'OHP', 'Lateral Raises', 'Tricep Pushdown', 'Cable Crunch'],
                 pull: ['Pull-ups', 'Lat Pulldown', 'Barbell Row', 'Seated Row', 'Face Pulls', 'Barbell Curl', 'Hammer Curl'],
                 upper: ['Bench Press', 'Pull-ups', 'OHP', 'Barbell Row', 'Lateral Raises', 'Tricep Pushdown', 'Barbell Curl'],
-                legs: ['Squat', 'Leg Press', 'Romanian Deadlift', 'Leg Extension', 'Leg Curl', 'Calf Raise', 'Cable Crunch']
+                legs: ['Squat', 'Leg Press', 'Romanian Deadlift', 'Leg Extension', 'Leg Curl', 'Standing Calf Raise', 'Cable Crunch']
             };
 
             container.innerHTML = defaults[currentSplit].map((ex, idx) => `
@@ -299,15 +323,43 @@
         }
 
         function selectExercise(exercise) {
-            const container = document.getElementById('exercises-list');
-            const exerciseEl = container.children[currentSwapIndex];
-            exerciseEl.setAttribute('data-exercise', exercise);
-            exerciseEl.querySelector('h4').textContent = exercise;
+            if (currentSwapIndex === -1) {
+                // Adding new exercise
+                const container = document.getElementById('exercises-list');
+                const newDiv = document.createElement('div');
+                newDiv.className = 'bg-gray-700 rounded-lg p-4';
+                newDiv.setAttribute('data-exercise', exercise);
+                newDiv.innerHTML = `
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="font-bold">${exercise}</h4>
+                        <button onclick="openSwapModal(${container.children.length})" class="text-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500">↻ Swap</button>
+                    </div>
+                    <div class="space-y-2 sets-container">
+                        <div class="flex gap-2">
+                            <input type="number" placeholder="lbs" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight">
+                            <input type="number" placeholder="reps" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps">
+                            <button onclick="logSet(this)" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
+                            <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm">+ Set</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(newDiv);
+            } else {
+                const container = document.getElementById('exercises-list');
+                const exerciseEl = container.children[currentSwapIndex];
+                exerciseEl.setAttribute('data-exercise', exercise);
+                exerciseEl.querySelector('h4').textContent = exercise;
+            }
             hideSwapModal();
         }
 
         function hideSwapModal() {
             document.getElementById('swap-modal').classList.add('hidden');
+        }
+
+        // Add Exercise
+        function addExercise() {
+            openSwapModal(-1);
         }
 
         // Log a set
@@ -366,6 +418,24 @@
                 mode: 'no-cors',
                 body: JSON.stringify({ action: 'logWeight', date, weight })
             }).then(() => console.log('Weight saved to Sheets')).catch(err => console.error('Sheets save error:', err));
+            
+            updateToGo();
+        }
+
+        function updateTarget() {
+            const input = document.getElementById('target-weight-input');
+            targetWeight = parseFloat(input.value) || 165;
+            localStorage.setItem('fitnessLogTargetWeight', targetWeight);
+            document.getElementById('target-weight').textContent = targetWeight;
+            updateToGo();
+        }
+        
+        function updateToGo() {
+            const current = parseFloat(document.getElementById('current-weight').textContent) || 165;
+            const diff = current - targetWeight;
+            const el = document.getElementById('weight-to-go');
+            el.textContent = Math.abs(diff).toFixed(1);
+            el.className = `text-3xl font-bold ${diff <= 0 ? 'text-green-400' : 'text-red-400'}`;
         }
 
         function renderWeightEntries() {
@@ -410,6 +480,48 @@
             alert(`Cardio logged: ${type} - ${distance || 0} mi in ${time} min`);
             document.getElementById('cardio-distance').value = '';
             document.getElementById('cardio-time').value = '';
+        }
+
+        // Rest Timer
+        function startRestTimer(seconds) {
+            if (restTimerInterval) clearInterval(restTimerInterval);
+            restTimeLeft = seconds;
+            const timerEl = document.getElementById('rest-timer');
+            const stopBtn = document.getElementById('rest-stop');
+            timerEl.classList.remove('hidden');
+            stopBtn.classList.remove('hidden');
+            updateRestDisplay();
+            restTimerInterval = setInterval(() => {
+                restTimeLeft--;
+                updateRestDisplay();
+                if (restTimeLeft <= 0) {
+                    clearInterval(restTimerInterval);
+                    restTimerInterval = null;
+                    timerEl.classList.add('hidden');
+                    stopBtn.classList.add('hidden');
+                    try {
+                        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                        const osc = ctx.createOscillator();
+                        osc.connect(ctx.destination);
+                        osc.frequency.value = 880;
+                        osc.start();
+                        setTimeout(() => { osc.stop(); ctx.close(); }, 200);
+                    } catch(e) {}
+                }
+            }, 1000);
+        }
+
+        function updateRestDisplay() {
+            const mins = Math.floor(restTimeLeft / 60);
+            const secs = restTimeLeft % 60;
+            document.getElementById('rest-timer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function stopRestTimer() {
+            if (restTimerInterval) clearInterval(restTimerInterval);
+            restTimerInterval = null;
+            document.getElementById('rest-timer').classList.add('hidden');
+            document.getElementById('rest-stop').classList.add('hidden');
         }
 
         // Workout Timer
@@ -533,9 +645,11 @@
                 const weightsData = await weightsRes.json();
                 if (weightsData.weights && weightsData.weights.length) {
                     weightEntries = weightsData.weights;
+                    saveToStorage();
                     renderWeightEntries();
                     if (weightEntries.length) {
                         document.getElementById('current-weight').textContent = weightEntries[0].weight;
+                        updateToGo();
                     }
                 }
 
@@ -544,6 +658,7 @@
                 const workoutsData = await workoutsRes.json();
                 if (workoutsData.workouts && workoutsData.workouts.length) {
                     workoutHistory = workoutsData.workouts;
+                    saveToStorage();
                     renderHistory();
                 }
 
