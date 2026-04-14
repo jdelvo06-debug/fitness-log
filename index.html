@@ -14,6 +14,12 @@
         .exercise-btn:hover { background: #3b82f6; color: white; }
         .exercise-btn.active { background: #1d4ed8; color: white; }
         .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+        @media (max-width: 640px) {
+            #app { padding: 0.75rem !important; }
+            .split-btn { font-size: 0.875rem; padding: 0.5rem 0.75rem; }
+            input, select { min-width: 0; }
+            .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
@@ -28,11 +34,11 @@
         </header>
 
         <!-- Tabs -->
-        <div class="flex border-b border-gray-700 mb-4">
-            <button onclick="switchTab('workout')" id="tab-workout" class="tab-active px-4 py-2">🏋️ Workout</button>
-            <button onclick="switchTab('weight')" id="tab-weight" class="px-4 py-2">⚖️ Weight</button>
-            <button onclick="switchTab('history')" id="tab-history" class="px-4 py-2">📊 History</button>
-            <button onclick="switchTab('recovery')" id="tab-recovery" class="px-4 py-2">🫀 Recovery</button>
+        <div class="flex border-b border-gray-700 mb-4 overflow-x-auto">
+            <button onclick="switchTab('workout')" id="tab-workout" class="tab-active px-3 py-2 whitespace-nowrap">🏋️ Workout</button>
+            <button onclick="switchTab('weight')" id="tab-weight" class="px-3 py-2 whitespace-nowrap">⚖️ Weight</button>
+            <button onclick="switchTab('history')" id="tab-history" class="px-3 py-2 whitespace-nowrap">📊 History</button>
+            <button onclick="switchTab('recovery')" id="tab-recovery" class="px-3 py-2 whitespace-nowrap">🫀 Recovery</button>
         </div>
 
         <!-- Weight Tab -->
@@ -53,10 +59,10 @@
                         <div class="text-3xl font-bold" id="weight-to-go">—</div>
                     </div>
                 </div>
-                <div class="flex gap-2 mb-4">
-                    <input type="date" id="weight-date" class="flex-1 bg-gray-700 rounded px-3 py-2">
-                    <input type="number" id="weight-value" placeholder="Weight (lbs)" class="flex-1 bg-gray-700 rounded px-3 py-2">
-                    <button onclick="logWeight()" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Log</button>
+                <div class="flex gap-2 mb-4 flex-wrap">
+                    <input type="date" id="weight-date" class="flex-1 min-w-[140px] bg-gray-700 rounded px-3 py-2">
+                    <input type="number" id="weight-value" placeholder="Weight (lbs)" class="flex-1 min-w-[120px] bg-gray-700 rounded px-3 py-2">
+                    <button onclick="logWeight()" class="btn-sm px-3 py-2 bg-blue-600 rounded hover:bg-blue-700 whitespace-nowrap">Log</button>
                 </div>
             </div>
             <div class="bg-gray-800 rounded-lg p-4">
@@ -93,9 +99,9 @@
                     </select>
                     <input type="number" id="cardio-distance" placeholder="Distance (mi)" class="bg-gray-700 rounded px-3 py-2">
                 </div>
-                <div class="flex gap-2">
-                    <input type="number" id="cardio-time" placeholder="Time (min)" class="flex-1 bg-gray-700 rounded px-3 py-2">
-                    <button onclick="logCardio()" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Log</button>
+                <div class="flex gap-2 flex-wrap">
+                    <input type="number" id="cardio-time" placeholder="Time (min)" class="flex-1 min-w-[100px] bg-gray-700 rounded px-3 py-2">
+                    <button onclick="logCardio()" class="btn-sm px-3 py-2 bg-blue-600 rounded hover:bg-blue-700 whitespace-nowrap">Log</button>
                 </div>
             </div>
 
@@ -107,13 +113,13 @@
 
             <!-- Workout Controls -->
             <div class="bg-gray-800 rounded-lg p-4 mt-4">
-                <div class="flex justify-between items-center mb-3">
-                    <span class="text-lg">Workout Time: <span id="workout-timer">0:00</span></span>
-                    <div class="flex gap-2">
-                        <button onclick="startWorkout()" class="px-4 py-2 bg-green-600 rounded hover:bg-green-700">▶ Start</button>
-                        <button onclick="endWorkout()" class="px-4 py-2 bg-red-600 rounded hover:bg-red-700">✓ End & Save</button>
+                    <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                        <span class="text-lg">Workout Time: <span id="workout-timer">0:00</span></span>
+                        <div class="flex gap-2">
+                            <button onclick="startWorkout()" class="btn-sm px-3 py-2 bg-green-600 rounded hover:bg-green-700 whitespace-nowrap">▶ Start</button>
+                            <button onclick="endWorkout()" class="btn-sm px-3 py-2 bg-red-600 rounded hover:bg-red-700 whitespace-nowrap">✓ End</button>
+                        </div>
                     </div>
-                </div>
             </div>
         </div>
 
@@ -326,11 +332,12 @@
                 const prev = weightEntries[i + 1];
                 const delta = prev ? (entry.weight - prev.weight).toFixed(1) : '—';
                 const deltaClass = delta > 0 ? 'text-red-400' : delta < 0 ? 'text-green-400' : 'text-gray-400';
+                const dateFmt = new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                 return `
                     <div class="flex justify-between items-center py-2 border-b border-gray-700">
-                        <span>${entry.date}</span>
+                        <span class="text-sm">${dateFmt}</span>
                         <span class="font-bold">${entry.weight} lbs</span>
-                        <span class="${deltaClass}">${delta > 0 ? '+' : ''}${delta}</span>
+                        <span class="${deltaClass} text-sm">${delta > 0 ? '+' : ''}${delta}</span>
                     </div>
                 `;
             }).join('') || '<div class="text-gray-400">No entries yet.</div>';
