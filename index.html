@@ -8,6 +8,9 @@
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#111827">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .modal-overlay { background: rgba(0,0,0,0.75); }
@@ -151,7 +154,9 @@
         <div id="tab-recovery-content" class="hidden">
             <div class="bg-gray-800 rounded-lg p-4">
                 <h2 class="text-xl font-bold mb-4">🫀 Muscle Recovery</h2>
-                <div class="text-center py-8 text-gray-400">Log workouts to see recovery data</div>
+                <p class="text-sm text-gray-400 mb-4">Based on your last workout per muscle group. Green = ready, yellow = almost, red = rest.</p>
+                <div id="recovery-grid" class="grid grid-cols-2 gap-3"></div>
+                <div class="mt-4 text-xs text-gray-500">48–72 hrs recommended between training the same group.</div>
             </div>
         </div>
 
@@ -438,6 +443,19 @@
             el.className = `text-3xl font-bold ${diff <= 0 ? 'text-green-400' : 'text-red-400'}`;
         }
 
+        function deleteWeightEntry(index) {
+            if (!confirm('Delete this weight entry?')) return;
+            weightEntries.splice(index, 1);
+            saveToStorage();
+            renderWeightEntries();
+            if (weightEntries.length) {
+                document.getElementById('current-weight').textContent = weightEntries[0].weight;
+            } else {
+                document.getElementById('current-weight').textContent = '—';
+            }
+            updateToGo();
+        }
+
         function renderWeightEntries() {
             const container = document.getElementById('weight-entries');
             container.innerHTML = weightEntries.slice(0, 10).map((entry, i) => {
@@ -449,7 +467,10 @@
                     <div class="flex justify-between items-center py-2 border-b border-gray-700">
                         <span class="text-sm">${dateFmt}</span>
                         <span class="font-bold">${entry.weight} lbs</span>
-                        <span class="${deltaClass} text-sm">${delta > 0 ? '+' : ''}${delta}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="${deltaClass} text-sm">${delta > 0 ? '+' : ''}${delta}</span>
+                            <button onclick="deleteWeightEntry(${i})" class="text-xs text-red-400 hover:text-red-300">✕</button>
+                        </div>
                     </div>
                 `;
             }).join('') || '<div class="text-gray-400">No entries yet.</div>';
@@ -575,17 +596,29 @@
 
             workoutStartTime = null;
             document.getElementById('workout-timer').textContent = '0:00';
+            renderRecovery();
             alert('Workout saved!');
+        }
+
+        function deleteWorkout(index) {
+            if (!confirm('Delete this workout?')) return;
+            workoutHistory.splice(index, 1);
+            saveToStorage();
+            renderHistory();
+            renderRecovery();
         }
 
         function renderHistory() {
             const container = document.getElementById('workout-history');
-            container.innerHTML = workoutHistory.slice(0, 10).map(workout => `
+            container.innerHTML = workoutHistory.slice(0, 10).map((workout, i) => `
                 <div class="bg-gray-700 rounded-lg p-4">
                     <div class="flex justify-between mb-2">
                         <span class="font-bold">${workout.date}</span>
-                        <span class="text-blue-400">${workout.split.toUpperCase()}</span>
-                        <span class="text-gray-400">${workout.duration}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-blue-400">${workout.split.toUpperCase()}</span>
+                            <span class="text-gray-400">${workout.duration}</span>
+                            <button onclick="deleteWorkout(${i})" class="text-xs text-red-400 hover:text-red-300">✕</button>
+                        </div>
                     </div>
                     <div class="space-y-1">
                         ${workout.exercises.map(ex => `
@@ -594,6 +627,52 @@
                     </div>
                 </div>
             `).join('') || '<div class="text-gray-400">No workouts logged yet.</div>';
+        }
+
+        // Recovery
+        const MUSCLE_GROUPS = {
+            'Chest': ['chest'], 'Back': ['back'], 'Shoulders': ['shoulders'],
+            'Triceps': ['triceps'], 'Biceps': ['biceps'],
+            'Quads': ['quads'], 'Hamstrings': ['hamstrings'], 'Glutes': ['glutes'],
+            'Calves': ['calves'], 'Abs': ['abs']
+        };
+
+        function getRecoveryData() {
+            const recovery = {};
+            Object.keys(MUSCLE_GROUPS).forEach(name => recovery[name] = null);
+            const now = Date.now();
+            workoutHistory.forEach(workout => {
+                const workoutDate = new Date(workout.date).getTime();
+                const hoursAgo = (now - workoutDate) / (1000 * 60 * 60);
+                if (hoursAgo > 168) return;
+                workout.exercises.forEach(ex => {
+                    for (const [groupName, groups] of Object.entries(MUSCLE_GROUPS)) {
+                        const belongs = groups.some(g => EXERCISES[g] && EXERCISES[g].includes(ex.name));
+                        if (belongs && (recovery[groupName] === null || hoursAgo < recovery[groupName])) {
+                            recovery[groupName] = hoursAgo;
+                        }
+                    }
+                });
+            });
+            return recovery;
+        }
+
+        function renderRecovery() {
+            const grid = document.getElementById('recovery-grid');
+            const data = getRecoveryData();
+            grid.innerHTML = Object.entries(data).map(([name, hours]) => {
+                let color, label;
+                if (hours === null) { color = 'bg-gray-700 border-gray-600'; label = 'No data'; }
+                else if (hours >= 72) { color = 'bg-green-900 border-green-600'; label = `${Math.floor(hours)}h ago ✅ Ready`; }
+                else if (hours >= 48) { color = 'bg-yellow-900 border-yellow-600'; label = `${Math.floor(hours)}h ago 🟡 Almost`; }
+                else { color = 'bg-red-900 border-red-600'; label = `${Math.floor(hours)}h ago 🔴 Rest`; }
+                return `
+                    <div class="${color} border rounded-lg p-3 text-center">
+                        <div class="font-bold text-sm">${name}</div>
+                        <div class="text-xs mt-1">${label}</div>
+                    </div>
+                `;
+            }).join('');
         }
 
         // Settings
@@ -634,6 +713,7 @@
                 workoutHistory = JSON.parse(history);
                 renderHistory();
             }
+            renderRecovery();
         }
 
         // Sync from Google Sheets
@@ -662,7 +742,8 @@
                     renderHistory();
                 }
 
-                alert('✅ Synced! ' + (weightsData.weights?.length || 0) + ' weight entries, ' + (workoutsData.workouts?.length || 0) + ' workouts loaded.');
+                    renderRecovery();
+                    alert('✅ Synced! ' + (weightsData.weights?.length || 0) + ' weight entries, ' + (workoutsData.workouts?.length || 0) + ' workouts loaded.');
             } catch (err) {
                 console.error('Sync error:', err);
                 alert('❌ Sync failed: ' + err.message);

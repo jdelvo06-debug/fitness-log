@@ -1,0 +1,22 @@
+{
+  "name": "Fitness Log v2",
+  "short_name": "FitLog",
+  "description": "Alfred's Fitness Log — track workouts, weight, and recovery",
+  "start_url": "/fitness-log/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
