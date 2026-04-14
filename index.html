@@ -308,6 +308,12 @@
             document.getElementById('current-weight').textContent = weight;
             renderWeightEntries();
             saveToStorage();
+
+            // Save to Google Sheets
+            fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'logWeight', date, weight })
+            }).catch(err => console.error('Sheets save error:', err));
         }
 
         function renderWeightEntries() {
@@ -369,14 +375,21 @@
             });
 
             if (exercises.length) {
-                workoutHistory.unshift({
+                const workout = {
                     date: new Date().toISOString().split('T')[0],
                     split: currentSplit,
                     exercises,
                     duration
-                });
+                };
+                workoutHistory.unshift(workout);
                 renderHistory();
                 saveToStorage();
+
+                // Save to Google Sheets
+                fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'logWorkout', workout })
+                }).catch(err => console.error('Sheets save error:', err));
             }
 
             workoutStartTime = null;
@@ -442,16 +455,34 @@
             }
         }
 
-        // Sync (placeholder)
-        function syncData() {
+        // Sync from Google Sheets
+        async function syncData() {
             const url = APPS_SCRIPT_URL;
-            if (!url) {
-                alert('Please configure Google Sheets URL in settings (⚙️)');
-                showSettings();
-                return;
+            try {
+                // Fetch weights
+                const weightsRes = await fetch(`${url}?action=getWeights`);
+                const weightsData = await weightsRes.json();
+                if (weightsData.weights && weightsData.weights.length) {
+                    weightEntries = weightsData.weights;
+                    renderWeightEntries();
+                    if (weightEntries.length) {
+                        document.getElementById('current-weight').textContent = weightEntries[0].weight;
+                    }
+                }
+
+                // Fetch workouts
+                const workoutsRes = await fetch(`${url}?action=getWorkouts`);
+                const workoutsData = await workoutsRes.json();
+                if (workoutsData.workouts && workoutsData.workouts.length) {
+                    workoutHistory = workoutsData.workouts;
+                    renderHistory();
+                }
+
+                alert('✅ Synced! ' + (weightsData.weights?.length || 0) + ' weight entries, ' + (workoutsData.workouts?.length || 0) + ' workouts loaded.');
+            } catch (err) {
+                console.error('Sync error:', err);
+                alert('❌ Sync failed: ' + err.message);
             }
-            // TODO: Implement Google Sheets sync
-            alert('Sync functionality requires Apps Script backend deployment');
         }
     </script>
 </body>
