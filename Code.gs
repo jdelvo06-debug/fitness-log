@@ -1,0 +1,138 @@
+// Fitness Log v2 - Google Apps Script Backend
+// Deploy as Web App: Execute as "Me", Who has access "Anyone"
+
+const SHEET_ID = '1jkder4DI5i4mswCMukwZI_KUfAXbnrb0Ghz_PrVsuyI';
+
+function doGet(e) {
+  const action = e.parameter.action;
+  
+  if (action === 'getWeights') {
+    return getWeights();
+  } else if (action === 'getWorkouts') {
+    return getWorkouts();
+  } else if (action === 'getSheetId') {
+    return ContentService.createTextOutput(JSON.stringify({sheetId: SHEET_ID}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({error: 'Invalid action'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents);
+  const action = data.action;
+  
+  if (action === 'logWeight') {
+    return logWeight(data.date, data.weight);
+  } else if (action === 'logWorkout') {
+    return logWorkout(data.workout);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({error: 'Invalid action'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getWeights() {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let sheet = ss.getSheetByName('Weights');
+    
+    if (!sheet) {
+      sheet = ss.insertSheet('Weights');
+      sheet.appendRow(['Date', 'Weight', 'Timestamp']);
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift(); // Remove headers
+    
+    const weights = data.map(row => ({
+      date: row[0],
+      weight: row[1],
+      timestamp: row[2]
+    })).filter(w => w.date && w.weight);
+    
+    return ContentService.createTextOutput(JSON.stringify({weights: weights}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({error: error.message}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function getWorkouts() {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let sheet = ss.getSheetByName('Workouts');
+    
+    if (!sheet) {
+      sheet = ss.insertSheet('Workouts');
+      sheet.appendRow(['Date', 'Split', 'Exercises', 'Duration', 'Timestamp']);
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift();
+    
+    const workouts = data.map(row => ({
+      date: row[0],
+      split: row[1],
+      exercises: JSON.parse(row[2] || '[]'),
+      duration: row[3],
+      timestamp: row[4]
+    })).filter(w => w.date);
+    
+    return ContentService.createTextOutput(JSON.stringify({workouts: workouts}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({error: error.message}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function logWeight(date, weight) {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let sheet = ss.getSheetByName('Weights');
+    
+    if (!sheet) {
+      sheet = ss.insertSheet('Weights');
+      sheet.appendRow(['Date', 'Weight', 'Timestamp']);
+    }
+    
+    const timestamp = new Date().toISOString();
+    sheet.appendRow([date, weight, timestamp]);
+    
+    return ContentService.createTextOutput(JSON.stringify({success: true, timestamp}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({error: error.message}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function logWorkout(workout) {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let sheet = ss.getSheetByName('Workouts');
+    
+    if (!sheet) {
+      sheet = ss.insertSheet('Workouts');
+      sheet.appendRow(['Date', 'Split', 'Exercises', 'Duration', 'Timestamp']);
+    }
+    
+    const timestamp = new Date().toISOString();
+    sheet.appendRow([
+      workout.date,
+      workout.split,
+      JSON.stringify(workout.exercises),
+      workout.duration,
+      timestamp
+    ]);
+    
+    return ContentService.createTextOutput(JSON.stringify({success: true, timestamp}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({error: error.message}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}

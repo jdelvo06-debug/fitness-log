@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alfred — Fitness Log v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .modal-overlay { background: rgba(0,0,0,0.75); }
+        .exercise-btn:hover { background: #3b82f6; color: white; }
+        .exercise-btn.active { background: #1d4ed8; color: white; }
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div id="app" class="max-w-4xl mx-auto p-4">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">💪 FITNESS LOG v2</h1>
+            <div class="flex gap-2">
+                <button onclick="syncData()" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700">↻ Sync</button>
+                <button onclick="showSettings()" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600">⚙️</button>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-gray-700 mb-4">
+            <button onclick="switchTab('workout')" id="tab-workout" class="tab-active px-4 py-2">🏋️ Workout</button>
+            <button onclick="switchTab('weight')" id="tab-weight" class="px-4 py-2">⚖️ Weight</button>
+            <button onclick="switchTab('history')" id="tab-history" class="px-4 py-2">📊 History</button>
+            <button onclick="switchTab('recovery')" id="tab-recovery" class="px-4 py-2">🫀 Recovery</button>
+        </div>
+
+        <!-- Weight Tab -->
+        <div id="tab-weight-content" class="hidden">
+            <div class="bg-gray-800 rounded-lg p-4 mb-4">
+                <h2 class="text-xl font-bold mb-4">⚖️ Weight Tracker</h2>
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="text-center">
+                        <div class="text-gray-400">Current</div>
+                        <div class="text-3xl font-bold" id="current-weight">165</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-400">Target</div>
+                        <div class="text-3xl font-bold" id="target-weight">—</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-400">To Go</div>
+                        <div class="text-3xl font-bold" id="weight-to-go">—</div>
+                    </div>
+                </div>
+                <div class="flex gap-2 mb-4">
+                    <input type="date" id="weight-date" class="flex-1 bg-gray-700 rounded px-3 py-2">
+                    <input type="number" id="weight-value" placeholder="Weight (lbs)" class="flex-1 bg-gray-700 rounded px-3 py-2">
+                    <button onclick="logWeight()" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Log</button>
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h3 class="font-bold mb-2">📋 Recent Entries</h3>
+                <div id="weight-entries" class="space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- Workout Tab -->
+        <div id="tab-workout-content">
+            <!-- Split Selection -->
+            <div class="bg-gray-800 rounded-lg p-4 mb-4">
+                <h2 class="text-xl font-bold mb-4">🗓 Select Split</h2>
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="selectSplit('push')" class="split-btn px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">🫸 Push</button>
+                    <button onclick="selectSplit('pull')" class="split-btn px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">🫷 Pull</button>
+                    <button onclick="selectSplit('upper')" class="split-btn px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">💪 Upper</button>
+                    <button onclick="selectSplit('legs')" class="split-btn px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">🦵 Legs</button>
+                </div>
+            </div>
+
+            <!-- Cardio Warmup -->
+            <div class="bg-gray-800 rounded-lg p-4 mb-4">
+                <h3 class="font-bold mb-3">🏃 Cardio Warmup</h3>
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <select id="cardio-type" class="bg-gray-700 rounded px-3 py-2">
+                        <option value="Jog">Jog</option>
+                        <option value="Run">Run</option>
+                        <option value="Walk">Walk</option>
+                        <option value="Bike">Bike</option>
+                        <option value="Elliptical">Elliptical</option>
+                        <option value="Stair Climber">Stair Climber</option>
+                        <option value="Jump Rope">Jump Rope</option>
+                    </select>
+                    <input type="number" id="cardio-distance" placeholder="Distance (mi)" class="bg-gray-700 rounded px-3 py-2">
+                </div>
+                <div class="flex gap-2">
+                    <input type="number" id="cardio-time" placeholder="Time (min)" class="flex-1 bg-gray-700 rounded px-3 py-2">
+                    <button onclick="logCardio()" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Log</button>
+                </div>
+            </div>
+
+            <!-- Exercises -->
+            <div id="exercise-container" class="bg-gray-800 rounded-lg p-4">
+                <h3 class="font-bold mb-4" id="split-title">🫸 PUSH EXERCISES</h3>
+                <div id="exercises-list" class="space-y-4"></div>
+            </div>
+
+            <!-- Workout Controls -->
+            <div class="bg-gray-800 rounded-lg p-4 mt-4">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-lg">Workout Time: <span id="workout-timer">0:00</span></span>
+                    <div class="flex gap-2">
+                        <button onclick="startWorkout()" class="px-4 py-2 bg-green-600 rounded hover:bg-green-700">▶ Start</button>
+                        <button onclick="endWorkout()" class="px-4 py-2 bg-red-600 rounded hover:bg-red-700">✓ End & Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="tab-history-content" class="hidden">
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h2 class="text-xl font-bold mb-4">📜 Workout History</h2>
+                <div id="workout-history" class="space-y-4">No workouts logged yet.</div>
+            </div>
+        </div>
+
+        <!-- Recovery Tab -->
+        <div id="tab-recovery-content" class="hidden">
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h2 class="text-xl font-bold mb-4">🫀 Muscle Recovery</h2>
+                <div class="text-center py-8 text-gray-400">Log workouts to see recovery data</div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="hidden modal-overlay fixed inset-0 flex items-center justify-center z-50">
+            <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+                <h2 class="text-xl font-bold mb-4">⚙️ Google Sheets Setup</h2>
+                <p class="text-sm text-gray-400 mb-4">Sheet ID: <code class="bg-gray-700 px-2 py-1 rounded">1jkder4DI5i4mswCMukwZI_KUfAXbnrb0Ghz_PrVsuyI</code></p>
+                <div class="mb-4">
+                    <label class="block text-sm font-bold mb-2">Apps Script Web App URL</label>
+                    <input type="url" id="apps-script-url" placeholder="https://script.google.com/macros/s/..." class="w-full bg-gray-700 rounded px-3 py-2">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="saveSettings()" class="flex-1 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Save</button>
+                    <button onclick="hideSettings()" class="flex-1 px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exercise Swap Modal -->
+        <div id="swap-modal" class="hidden modal-overlay fixed inset-0 flex items-center justify-center z-50">
+            <div class="bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+                <h2 class="text-xl font-bold mb-4">🔄 Swap Exercise</h2>
+                <input type="text" id="exercise-search" placeholder="Search exercises..." class="bg-gray-700 rounded px-3 py-2 mb-4" oninput="filterExercises()">
+                <div id="exercise-options" class="flex-1 overflow-y-auto space-y-2"></div>
+                <button onclick="hideSwapModal()" class="mt-4 px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Exercise Database by Muscle Group
+        const EXERCISES = {
+            chest: ['Bench Press', 'Incline DB Press', 'Cable Fly', 'Push-ups', 'Dips', 'Decline Press', 'Machine Chest Press', 'Pec Deck'],
+            back: ['Pull-ups', 'Lat Pulldown', 'Barbell Row', 'Seated Row', 'Deadlift', 'T-Bar Row', 'Cable Row', 'Face Pulls', 'Reverse Fly'],
+            shoulders: ['OHP', 'Lateral Raises', 'Arnold Press', 'Front Raises', 'Upright Row', 'Cable Lateral Raise', 'Machine Shoulder Press'],
+            triceps: ['Tricep Pushdown', 'Skull Crushers', 'Close-Grip Bench', 'Overhead Extension', 'Dips', 'Kickbacks', 'Rope Pushdown'],
+            biceps: ['Barbell Curl', 'Hammer Curl', 'Preacher Curl', 'Incline Curl', 'Concentration Curl', 'Cable Curl', '21s'],
+            quads: ['Squat', 'Leg Press', 'Lunges', 'Leg Extension', 'Front Squat', 'Goblet Squat', 'Step-ups', 'Bulgarian Split Squat'],
+            hamstrings: ['Romanian Deadlift', 'Leg Curl', 'Stiff-Leg Deadlift', 'Good Mornings', 'Nordic Curl', 'Glute-Ham Raise'],
+            glutes: ['Hip Thrust', 'Glute Bridge', 'Cable Kickback', 'Sumo Squat', 'Bulgarian Split Squat', 'Step-ups'],
+            calves: ['Standing Calf Raise', 'Seated Calf Raise', 'Donkey Calf Raise', 'Jump Rope'],
+            abs: ['Cable Crunch', 'Plank', 'Russian Twist', 'Leg Raise', 'Ab Wheel', 'Hanging Knee Raise', 'Mountain Climbers', 'Bicycle Crunch']
+        };
+
+        // Split to Muscle Groups
+        const SPLIT_EXERCISES = {
+            push: ['chest', 'shoulders', 'triceps'],
+            pull: ['back', 'biceps'],
+            upper: ['chest', 'back', 'shoulders', 'biceps', 'triceps'],
+            legs: ['quads', 'hamstrings', 'glutes', 'calves', 'abs']
+        };
+
+        let currentSplit = 'push';
+        let currentWorkout = [];
+        let workoutStartTime = null;
+        let workoutTimerInterval = null;
+        let currentSwapIndex = null;
+        let weightEntries = [];
+        let workoutHistory = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('weight-date').valueAsDate = new Date();
+            loadFromStorage();
+            renderExercises();
+        });
+
+        // Tab Switching
+        function switchTab(tab) {
+            ['workout', 'weight', 'history', 'recovery'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.remove('tab-active');
+                document.getElementById(`tab-${t}-content`).classList.add('hidden');
+            });
+            document.getElementById(`tab-${tab}`).classList.add('tab-active');
+            document.getElementById(`tab-${tab}-content`).classList.remove('hidden');
+        }
+
+        // Split Selection
+        function selectSplit(split) {
+            currentSplit = split;
+            document.querySelectorAll('.split-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600');
+                btn.classList.add('bg-gray-700');
+            });
+            event.target.classList.remove('bg-gray-700');
+            event.target.classList.add('bg-blue-600');
+            document.getElementById('split-title').textContent = `🫸 ${split.toUpperCase()} EXERCISES`.replace('PUSH', '🫸 Push').replace('PULL', '🫷 Pull').replace('UPPER', '💪 Upper').replace('LEGS', '🦵 Legs');
+            renderExercises();
+        }
+
+        // Render Exercises
+        function renderExercises() {
+            const container = document.getElementById('exercises-list');
+            const muscleGroups = SPLIT_EXERCISES[currentSplit];
+            let exercises = [];
+            
+            muscleGroups.forEach(group => {
+                EXERCISES[group].forEach(ex => {
+                    exercises.push({ name: ex, group });
+                });
+            });
+
+            // Default exercises for each split
+            const defaults = {
+                push: ['Bench Press', 'Incline DB Press', 'Cable Fly', 'OHP', 'Lateral Raises', 'Tricep Pushdown', 'Cable Crunch'],
+                pull: ['Pull-ups', 'Lat Pulldown', 'Barbell Row', 'Seated Row', 'Face Pulls', 'Barbell Curl', 'Hammer Curl'],
+                upper: ['Bench Press', 'Pull-ups', 'OHP', 'Barbell Row', 'Lateral Raises', 'Tricep Pushdown', 'Barbell Curl'],
+                legs: ['Squat', 'Leg Press', 'Romanian Deadlift', 'Leg Extension', 'Leg Curl', 'Calf Raise', 'Cable Crunch']
+            };
+
+            container.innerHTML = defaults[currentSplit].map((ex, idx) => `
+                <div class="bg-gray-700 rounded-lg p-4" data-exercise="${ex}" data-index="${idx}">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="font-bold">${ex}</h4>
+                        <button onclick="openSwapModal(${idx})" class="text-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500">↻ Swap</button>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex gap-2">
+                            <input type="number" placeholder="lbs" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight">
+                            <input type="number" placeholder="reps" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps">
+                            <button onclick="logSet(this, ${idx})" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Swap Modal
+        function openSwapModal(index) {
+            currentSwapIndex = index;
+            const muscleGroups = SPLIT_EXERCISES[currentSplit];
+            const options = [];
+            
+            muscleGroups.forEach(group => {
+                EXERCISES[group].forEach(ex => {
+                    if (!options.includes(ex)) options.push(ex);
+                });
+            });
+
+            document.getElementById('exercise-options').innerHTML = options.map(ex => `
+                <button class="exercise-btn w-full text-left px-4 py-2 bg-gray-700 rounded hover:bg-blue-600" onclick="selectExercise('${ex}')">${ex}</button>
+            `).join('');
+
+            document.getElementById('swap-modal').classList.remove('hidden');
+            document.getElementById('exercise-search').value = '';
+        }
+
+        function filterExercises() {
+            const search = document.getElementById('exercise-search').value.toLowerCase();
+            const buttons = document.querySelectorAll('.exercise-btn');
+            buttons.forEach(btn => {
+                const text = btn.textContent.toLowerCase();
+                btn.style.display = text.includes(search) ? 'block' : 'none';
+            });
+        }
+
+        function selectExercise(exercise) {
+            const container = document.getElementById('exercises-list');
+            const exerciseEl = container.children[currentSwapIndex];
+            exerciseEl.setAttribute('data-exercise', exercise);
+            exerciseEl.querySelector('h4').textContent = exercise;
+            hideSwapModal();
+        }
+
+        function hideSwapModal() {
+            document.getElementById('swap-modal').classList.add('hidden');
+        }
+
+        // Weight Logging
+        function logWeight() {
+            const date = document.getElementById('weight-date').value;
+            const weight = parseFloat(document.getElementById('weight-value').value);
+            
+            if (!weight) return alert('Enter weight');
+            
+            weightEntries.push({ date, weight });
+            weightEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            document.getElementById('current-weight').textContent = weight;
+            renderWeightEntries();
+            saveToStorage();
+        }
+
+        function renderWeightEntries() {
+            const container = document.getElementById('weight-entries');
+            container.innerHTML = weightEntries.slice(0, 10).map((entry, i) => {
+                const prev = weightEntries[i + 1];
+                const delta = prev ? (entry.weight - prev.weight).toFixed(1) : '—';
+                const deltaClass = delta > 0 ? 'text-red-400' : delta < 0 ? 'text-green-400' : 'text-gray-400';
+                return `
+                    <div class="flex justify-between items-center py-2 border-b border-gray-700">
+                        <span>${entry.date}</span>
+                        <span class="font-bold">${entry.weight} lbs</span>
+                        <span class="${deltaClass}">${delta > 0 ? '+' : ''}${delta}</span>
+                    </div>
+                `;
+            }).join('') || '<div class="text-gray-400">No entries yet.</div>';
+        }
+
+        // Cardio
+        function logCardio() {
+            const type = document.getElementById('cardio-type').value;
+            const distance = document.getElementById('cardio-distance').value;
+            const time = document.getElementById('cardio-time').value;
+            
+            if (!time) return alert('Enter time');
+            
+            alert(`Cardio logged: ${type} - ${distance || 0} mi in ${time} min`);
+            document.getElementById('cardio-distance').value = '';
+            document.getElementById('cardio-time').value = '';
+        }
+
+        // Workout Timer
+        function startWorkout() {
+            if (workoutStartTime) return;
+            workoutStartTime = Date.now();
+            workoutTimerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - workoutStartTime) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = elapsed % 60;
+                document.getElementById('workout-timer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function endWorkout() {
+            if (!workoutStartTime) return;
+            clearInterval(workoutTimerInterval);
+            
+            const duration = document.getElementById('workout-timer').textContent;
+            const exercises = [];
+            document.querySelectorAll('#exercises-list > div').forEach(div => {
+                const name = div.getAttribute('data-exercise');
+                const sets = [];
+                div.querySelectorAll('.set-weight').forEach((input, i) => {
+                    const weight = input.value;
+                    const reps = div.querySelectorAll('.set-reps')[i]?.value;
+                    if (weight && reps) sets.push({ weight, reps });
+                });
+                if (sets.length) exercises.push({ name, sets });
+            });
+
+            if (exercises.length) {
+                workoutHistory.unshift({
+                    date: new Date().toISOString().split('T')[0],
+                    split: currentSplit,
+                    exercises,
+                    duration
+                });
+                renderHistory();
+                saveToStorage();
+            }
+
+            workoutStartTime = null;
+            document.getElementById('workout-timer').textContent = '0:00';
+            alert('Workout saved!');
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('workout-history');
+            container.innerHTML = workoutHistory.slice(0, 10).map(workout => `
+                <div class="bg-gray-700 rounded-lg p-4">
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold">${workout.date}</span>
+                        <span class="text-blue-400">${workout.split.toUpperCase()}</span>
+                        <span class="text-gray-400">${workout.duration}</span>
+                    </div>
+                    <div class="space-y-1">
+                        ${workout.exercises.map(ex => `
+                            <div class="text-sm text-gray-300">${ex.name}: ${ex.sets.map(s => `${s.weight}x${s.reps}`).join(', ')}</div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('') || '<div class="text-gray-400">No workouts logged yet.</div>';
+        }
+
+        // Settings
+        function showSettings() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function hideSettings() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function saveSettings() {
+            const url = document.getElementById('apps-script-url').value;
+            if (url) {
+                localStorage.setItem('appsScriptUrl', url);
+                alert('Settings saved!');
+                hideSettings();
+            }
+        }
+
+        // Storage
+        function saveToStorage() {
+            localStorage.setItem('fitnessLogWeights', JSON.stringify(weightEntries));
+            localStorage.setItem('fitnessLogHistory', JSON.stringify(workoutHistory));
+        }
+
+        function loadFromStorage() {
+            const weights = localStorage.getItem('fitnessLogWeights');
+            const history = localStorage.getItem('fitnessLogHistory');
+            if (weights) {
+                weightEntries = JSON.parse(weights);
+                renderWeightEntries();
+                if (weightEntries.length) {
+                    document.getElementById('current-weight').textContent = weightEntries[0].weight;
+                }
+            }
+            if (history) {
+                workoutHistory = JSON.parse(history);
+                renderHistory();
+            }
+        }
+
+        // Sync (placeholder)
+        function syncData() {
+            const url = localStorage.getItem('appsScriptUrl');
+            if (!url) {
+                alert('Please configure Google Sheets URL in settings (⚙️)');
+                showSettings();
+                return;
+            }
+            // TODO: Implement Google Sheets sync
+            alert('Sync functionality requires Apps Script backend deployment');
+        }
+    </script>
+</body>
+</html>
