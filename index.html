@@ -374,12 +374,10 @@
             for (let i = 0; i < numSets; i++) {
                 let wVal, rVal;
                 if (lastData && lastData.sets[i]) {
-                    // Use previous workout data
                     wVal = parseInt(lastData.sets[i].weight);
                     rVal = parseInt(lastData.sets[i].reps);
-                    // Progressive overload: bump weight if all sets completed last time
                     if (lastData.suggestBump && i === 0) {
-                        wVal += 5; // suggest +5lbs
+                        wVal += 5;
                     }
                 } else {
                     wVal = defaults.weight;
@@ -392,18 +390,22 @@
                 const weightValue = wVal || '';
                 
                 setsHTML += `
-                    <div class="flex gap-2">
-                        <div class="relative">
-                            <input type="number" inputmode="numeric" value="${weightValue}" placeholder="${weightPlaceholder}" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight" oninput="cascadeSetValues(this, 'weight')">
-                            ${lastData && lastData.suggestBump && i === 0 ? '<span class="absolute -top-4 left-0 text-[10px] text-green-400">↑+5</span>' : ''}
+                    <div class="flex gap-2 items-center">
+                        <span class="text-[11px] text-gray-500 w-4">${i + 1}</span>
+                        <div class="relative flex-1">
+                            <input type="number" inputmode="numeric" value="${weightValue}" placeholder="${weightPlaceholder}" class="w-full bg-gray-600 rounded px-2 py-1 set-weight" oninput="cascadeSetValues(this, 'weight')">
                         </div>
-                        <input type="number" inputmode="numeric" value="${repValue}" placeholder="${repPlaceholder}" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps" oninput="cascadeSetValues(this, 'reps')">
-                        <button onclick="logSet(this)" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
-                        <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm">+ Set</button>
+                        <div class="relative flex-1">
+                            <input type="number" inputmode="numeric" value="${repValue}" placeholder="${repPlaceholder}" class="w-full bg-gray-600 rounded px-2 py-1 set-reps" oninput="cascadeSetValues(this, 'reps')">
+                        </div>
+                        <button onclick="logSet(this)" class="px-2 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm whitespace-nowrap">Log</button>
+                        <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm whitespace-nowrap">+ Set</button>
                     </div>`;
+            }
             }
             
             const groupTag = getGroupTag(exerciseName);
+            const bumpTag = (lastData && lastData.suggestBump) ? ' ↑+5' : '';
             return `
                 <div class="bg-gray-700 rounded-lg p-4" data-exercise="${exerciseName}" data-index="${idx}">
                     <div class="flex justify-between items-center mb-1">
@@ -413,7 +415,7 @@
                         </div>
                         <button onclick="openSwapModal(${idx})" class="text-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500">↻ Swap</button>
                     </div>
-                    <div class="text-xs text-gray-400 mb-2">${defaults.sets}×${repsLabel} ${lastData ? '(previous)' : '(suggested)'}${defaults.weight ? ' · ' + defaults.weight + 'lbs' : ''}</div>
+                    <div class="text-xs text-gray-400 mb-2">${defaults.sets}×${repsLabel} ${lastData ? '(previous)' : '(suggested)'}${defaults.weight ? ' · ' + defaults.weight + 'lbs' : ''}${bumpTag}</div>
                     <div class="space-y-2 sets-container">
                         ${setsHTML}
                     </div>
@@ -541,9 +543,7 @@
         // Add a new set row
         function addSet(btn) {
             const container = btn.closest('.sets-container');
-            const prevRows = container.querySelectorAll('.flex:not(.exercise-header)');
             let prevWeight = '', prevReps = '';
-            // Get values from previous set row if exists
             const prevRow = btn.closest('.flex');
             if (prevRow) {
                 const pw = prevRow.querySelector('.set-weight');
@@ -551,13 +551,19 @@
                 if (pw && pw.value) prevWeight = pw.value;
                 if (pr && pr.value) prevReps = pr.value;
             }
+            const setNum = container.querySelectorAll('.flex').length + 1;
             const newRow = document.createElement('div');
-            newRow.className = 'flex gap-2';
+            newRow.className = 'flex gap-2 items-center';
             newRow.innerHTML = `
-                <input type="number" inputmode="numeric" value="${prevWeight}" placeholder="lbs" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight" oninput="cascadeSetValues(this, 'weight')">
-                <input type="number" inputmode="numeric" value="${prevReps}" placeholder="reps" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps" oninput="cascadeSetValues(this, 'reps')">
-                <button onclick="logSet(this)" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
-                <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm">+ Set</button>
+                <span class="text-[11px] text-gray-500 w-4">${setNum}</span>
+                <div class="relative flex-1">
+                    <input type="number" inputmode="numeric" value="${prevWeight}" placeholder="lbs" class="w-full bg-gray-600 rounded px-2 py-1 set-weight" oninput="cascadeSetValues(this, 'weight')">
+                </div>
+                <div class="relative flex-1">
+                    <input type="number" inputmode="numeric" value="${prevReps}" placeholder="reps" class="w-full bg-gray-600 rounded px-2 py-1 set-reps" oninput="cascadeSetValues(this, 'reps')">
+                </div>
+                <button onclick="logSet(this)" class="px-2 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm whitespace-nowrap">Log</button>
+                <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm whitespace-nowrap">+ Set</button>
             `;
             container.appendChild(newRow);
         }
