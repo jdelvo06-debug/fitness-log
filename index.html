@@ -351,6 +351,14 @@
 
         // Split Selection
         function selectSplit(split) {
+            // Check if there's unsaved data in current exercises
+            const hasData = document.querySelectorAll('.sets-container .set-weight').length > 0;
+            if (hasData && split !== currentSplit) {
+                const loggedSets = document.querySelectorAll('.bg-green-600');
+                if (loggedSets.length > 0) {
+                    if (!confirm('Switch splits? Logged sets in current workout will be kept, unlogged entries will be lost.')) return;
+                }
+            }
             currentSplit = split;
             document.querySelectorAll('.split-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-600');
@@ -381,7 +389,7 @@
                 if (lastData && lastData.sets[i]) {
                     wVal = parseInt(lastData.sets[i].weight);
                     rVal = parseInt(lastData.sets[i].reps);
-                    if (lastData.suggestBump && i === 0) {
+                    if (lastData.suggestBump) {
                         wVal += 5;
                     }
                 } else {
@@ -729,6 +737,7 @@
 
         function endWorkout() {
             if (!workoutStartTime) return;
+            if (!confirm('End workout and save?')) return;
             clearInterval(workoutTimerInterval);
             
             const duration = document.getElementById('workout-timer').textContent;
@@ -901,7 +910,11 @@
                 const weightsRes = await fetch(`${url}?action=getWeights`);
                 const weightsData = await weightsRes.json();
                 if (weightsData.weights && weightsData.weights.length) {
-                    weightEntries = weightsData.weights;
+                    // Merge: keep local entries not already in cloud
+                    const cloudDates = new Set(weightsData.weights.map(w => w.date));
+                    const localOnly = weightEntries.filter(w => !cloudDates.has(w.date));
+                    weightEntries = [...localOnly, ...weightsData.weights];
+                    weightEntries.sort((a, b) => b.date.localeCompare(a.date));
                     saveToStorage();
                     renderWeightEntries();
                     if (weightEntries.length) {
@@ -914,7 +927,11 @@
                 const workoutsRes = await fetch(`${url}?action=getWorkouts`);
                 const workoutsData = await workoutsRes.json();
                 if (workoutsData.workouts && workoutsData.workouts.length) {
-                    workoutHistory = workoutsData.workouts;
+                    // Merge: keep local workouts not already in cloud
+                    const cloudWorkoutKeys = new Set(workoutsData.workouts.map(w => `${w.date}|${w.split}|${w.duration}`));
+                    const localOnly = workoutHistory.filter(w => !cloudWorkoutKeys.has(`${w.date}|${w.split}|${w.duration}`));
+                    workoutHistory = [...localOnly, ...workoutsData.workouts];
+                    workoutHistory.sort((a, b) => b.date.localeCompare(a.date));
                     saveToStorage();
                     renderHistory();
                 }
