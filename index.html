@@ -25,6 +25,9 @@
             .split-btn { font-size: 0.875rem; padding: 0.5rem 0.75rem; }
             input, select { min-width: 0; }
             .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
+            .set-row { flex-wrap: wrap; }
+            .set-row .set-num { display: none; }
+            .set-row .set-weight, .set-row .set-reps { flex: 1 1 0; min-width: 60px; }
         }
     </style>
 </head>
@@ -390,8 +393,8 @@
                 const weightValue = wVal || '';
                 
                 setsHTML += `
-                    <div class="flex gap-2 items-center">
-                        <span class="text-[11px] text-gray-500 w-4">${i + 1}</span>
+                    <div class="flex gap-2 items-center set-row">
+                        <span class="text-[11px] text-gray-500 w-4 set-num">${i + 1}</span>
                         <div class="relative flex-1">
                             <input type="number" inputmode="numeric" value="${weightValue}" placeholder="${weightPlaceholder}" class="w-full bg-gray-600 rounded px-2 py-1 set-weight" oninput="cascadeSetValues(this, 'weight')">
                         </div>
@@ -401,7 +404,6 @@
                         <button onclick="logSet(this)" class="px-2 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm whitespace-nowrap">Log</button>
                         <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm whitespace-nowrap">+ Set</button>
                     </div>`;
-            }
             }
             
             const groupTag = getGroupTag(exerciseName);
@@ -553,7 +555,7 @@
             }
             const setNum = container.querySelectorAll('.flex').length + 1;
             const newRow = document.createElement('div');
-            newRow.className = 'flex gap-2 items-center';
+            newRow.className = 'flex gap-2 items-center set-row';
             newRow.innerHTML = `
                 <span class="text-[11px] text-gray-500 w-4">${setNum}</span>
                 <div class="relative flex-1">
