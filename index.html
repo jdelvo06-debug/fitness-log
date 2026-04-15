@@ -505,8 +505,8 @@
             const className = field === 'weight' ? '.set-weight' : '.set-reps';
             const allInputs = exerciseCard.querySelectorAll(className);
             allInputs.forEach(otherInput => {
-                // Only cascade to unfilled (empty or not-yet-logged) inputs
-                if (otherInput !== input && !otherInput.disabled && !otherInput.value) {
+                // Cascade to all non-disabled (non-logged) inputs except the one you're typing in
+                if (otherInput !== input && !otherInput.disabled) {
                     otherInput.value = value;
                 }
             });
