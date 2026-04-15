@@ -17,6 +17,9 @@
         .exercise-btn:hover { background: #3b82f6; color: white; }
         .exercise-btn.active { background: #1d4ed8; color: white; }
         .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+        input[type=number] { -moz-appearance: textfield; }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         @media (max-width: 640px) {
             #app { padding: 0.75rem !important; }
             .split-btn { font-size: 0.875rem; padding: 0.5rem 0.75rem; }
@@ -65,12 +68,12 @@
                 <div class="flex gap-2 mb-4 flex-wrap items-end">
                     <div class="flex-1 min-w-[100px]">
                         <label class="text-xs text-gray-400">Target (lbs)</label>
-                        <input type="number" id="target-weight-input" placeholder="165" class="w-full bg-gray-700 rounded px-3 py-2" oninput="updateTarget()">
+                        <input type="number" inputmode="numeric" id="target-weight-input" placeholder="165" class="w-full bg-gray-700 rounded px-3 py-2" oninput="updateTarget()">
                     </div>
                 </div>
                 <div class="flex gap-2 mb-4 flex-wrap">
                     <input type="date" id="weight-date" class="flex-1 min-w-[140px] bg-gray-700 rounded px-3 py-2">
-                    <input type="number" id="weight-value" placeholder="Weight (lbs)" class="flex-1 min-w-[120px] bg-gray-700 rounded px-3 py-2">
+                    <input type="number" inputmode="numeric" id="weight-value" placeholder="Weight (lbs)" class="flex-1 min-w-[120px] bg-gray-700 rounded px-3 py-2">
                     <button onclick="logWeight()" class="btn-sm px-3 py-2 bg-blue-600 rounded hover:bg-blue-700 whitespace-nowrap">Log</button>
                 </div>
             </div>
@@ -106,10 +109,10 @@
                         <option value="Stair Climber">Stair Climber</option>
                         <option value="Jump Rope">Jump Rope</option>
                     </select>
-                    <input type="number" id="cardio-distance" placeholder="Distance (mi)" class="bg-gray-700 rounded px-3 py-2">
+                    <input type="number" inputmode="numeric" id="cardio-distance" placeholder="Distance (mi)" class="bg-gray-700 rounded px-3 py-2">
                 </div>
                 <div class="flex gap-2 flex-wrap">
-                    <input type="number" id="cardio-time" placeholder="Time (min)" class="flex-1 min-w-[100px] bg-gray-700 rounded px-3 py-2">
+                    <input type="number" inputmode="numeric" id="cardio-time" placeholder="Time (min)" class="flex-1 min-w-[100px] bg-gray-700 rounded px-3 py-2">
                     <button onclick="logCardio()" class="btn-sm px-3 py-2 bg-blue-600 rounded hover:bg-blue-700 whitespace-nowrap">Log</button>
                 </div>
             </div>
@@ -323,6 +326,12 @@
             loadFromStorage();
             updateToGo();
             renderExercises();
+            // Auto-select number inputs on tap + use numeric keypad
+            document.addEventListener('focusin', (e) => {
+                if (e.target.tagName === 'INPUT' && e.target.type === 'number') {
+                    setTimeout(() => e.target.select(), 10);
+                }
+            });
         });
 
         // Tab Switching
@@ -385,10 +394,10 @@
                 setsHTML += `
                     <div class="flex gap-2">
                         <div class="relative">
-                            <input type="number" value="${weightValue}" placeholder="${weightPlaceholder}" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight" oninput="cascadeSetValues(this, 'weight')">
+                            <input type="number" inputmode="numeric" value="${weightValue}" placeholder="${weightPlaceholder}" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight" oninput="cascadeSetValues(this, 'weight')">
                             ${lastData && lastData.suggestBump && i === 0 ? '<span class="absolute -top-4 left-0 text-[10px] text-green-400">↑+5</span>' : ''}
                         </div>
-                        <input type="number" value="${repValue}" placeholder="${repPlaceholder}" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps" oninput="cascadeSetValues(this, 'reps')">
+                        <input type="number" inputmode="numeric" value="${repValue}" placeholder="${repPlaceholder}" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps" oninput="cascadeSetValues(this, 'reps')">
                         <button onclick="logSet(this)" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
                         <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm">+ Set</button>
                     </div>`;
@@ -545,8 +554,8 @@
             const newRow = document.createElement('div');
             newRow.className = 'flex gap-2';
             newRow.innerHTML = `
-                <input type="number" value="${prevWeight}" placeholder="lbs" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight">
-                <input type="number" value="${prevReps}" placeholder="reps" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps">
+                <input type="number" inputmode="numeric" value="${prevWeight}" placeholder="lbs" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight" oninput="cascadeSetValues(this, 'weight')">
+                <input type="number" inputmode="numeric" value="${prevReps}" placeholder="reps" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps" oninput="cascadeSetValues(this, 'reps')">
                 <button onclick="logSet(this)" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
                 <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm">+ Set</button>
             `;
