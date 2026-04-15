@@ -196,16 +196,16 @@
     <script>
         // Exercise Database by Muscle Group
         const EXERCISES = {
-            chest: ['Bench Press', 'Incline DB Press', 'Cable Fly', 'Push-ups', 'Dips', 'Decline Press', 'Machine Chest Press', 'Pec Deck'],
-            back: ['Pull-ups', 'Lat Pulldown', 'Barbell Row', 'Seated Row', 'Deadlift', 'T-Bar Row', 'Cable Row', 'Face Pulls', 'Reverse Fly'],
-            shoulders: ['OHP', 'Lateral Raises', 'Arnold Press', 'Front Raises', 'Upright Row', 'Cable Lateral Raise', 'Machine Shoulder Press'],
-            triceps: ['Tricep Pushdown', 'Skull Crushers', 'Close-Grip Bench', 'Overhead Extension', 'Dips', 'Kickbacks', 'Rope Pushdown'],
-            biceps: ['Barbell Curl', 'Hammer Curl', 'Preacher Curl', 'Incline Curl', 'Concentration Curl', 'Cable Curl', '21s'],
+            chest: ['Bench Press', 'Incline DB Press', 'DB Press', 'DB Fly', 'DB Incline Press', 'Cable Fly', 'Push-ups', 'Dips', 'Decline Press', 'Machine Chest Press', 'Pec Deck'],
+            back: ['Pull-ups', 'Lat Pulldown', 'Barbell Row', 'DB Row', 'Seated Row', 'Cable Row', 'Deadlift', 'T-Bar Row', 'Face Pulls', 'Reverse Fly'],
+            shoulders: ['OHP', 'Lateral Raises', 'DB Lateral Raise', 'Cable Lateral Raise', 'Arnold Press', 'DB Shrugs', 'Front Raises', 'Upright Row', 'Machine Shoulder Press'],
+            triceps: ['Tricep Pushdown', 'Cable Tricep Pushdown', 'DB Tricep Extension', 'Cable Kickback', 'Skull Crushers', 'Close-Grip Bench', 'Overhead Extension', 'Dips', 'Kickbacks', 'Rope Pushdown'],
+            biceps: ['Barbell Curl', 'DB Curl', 'Hammer Curl', 'DB Hammer Curl', 'Cable Curl', 'Preacher Curl', 'Incline Curl', 'Concentration Curl', '21s'],
             quads: ['Squat', 'Leg Press', 'Lunges', 'Leg Extension', 'Front Squat', 'Goblet Squat', 'Step-ups', 'Bulgarian Split Squat'],
-            hamstrings: ['Romanian Deadlift', 'Leg Curl', 'Stiff-Leg Deadlift', 'Good Mornings', 'Nordic Curl', 'Glute-Ham Raise'],
+            hamstrings: ['Romanian Deadlift', 'DB Romanian Deadlift', 'Leg Curl', 'Stiff-Leg Deadlift', 'Good Mornings', 'Nordic Curl', 'Glute-Ham Raise'],
             glutes: ['Hip Thrust', 'Glute Bridge', 'Cable Kickback', 'Sumo Squat', 'Bulgarian Split Squat', 'Step-ups'],
             calves: ['Standing Calf Raise', 'Seated Calf Raise', 'Donkey Calf Raise', 'Jump Rope'],
-            abs: ['Cable Crunch', 'Plank', 'Russian Twist', 'Leg Raise', 'Ab Wheel', 'Hanging Knee Raise', 'Mountain Climbers', 'Bicycle Crunch']
+            abs: ['Cable Crunch', 'Cable Woodchop', 'Plank', 'Russian Twist', 'Leg Raise', 'Ab Wheel', 'Hanging Knee Raise', 'Mountain Climbers', 'Bicycle Crunch']
         };
 
         // Exercise defaults: sets, reps, suggested starting weight (lbs)
@@ -221,13 +221,18 @@
             'Front Squat': { sets: 4, reps: 5, weight: 95 },
             // Medium compounds - 3x8
             'Incline DB Press': { sets: 3, reps: 8, weight: 50 },
+            'DB Press': { sets: 3, reps: 8, weight: 50 },
+            'DB Fly': { sets: 3, reps: 10, weight: 25 },
+            'DB Incline Press': { sets: 3, reps: 8, weight: 45 },
             'Leg Press': { sets: 3, reps: 8, weight: 270 },
             'Lat Pulldown': { sets: 3, reps: 8, weight: 100 },
             'Seated Row': { sets: 3, reps: 8, weight: 100 },
             'Romanian Deadlift': { sets: 3, reps: 8, weight: 135 },
+            'DB Romanian Deadlift': { sets: 3, reps: 8, weight: 50 },
             'Lunges': { sets: 3, reps: 8, weight: 40 },
             'T-Bar Row': { sets: 3, reps: 8, weight: 90 },
             'Cable Row': { sets: 3, reps: 8, weight: 100 },
+            'DB Row': { sets: 3, reps: 8, weight: 50 },
             'Arnold Press': { sets: 3, reps: 8, weight: 35 },
             'Stiff-Leg Deadlift': { sets: 3, reps: 8, weight: 135 },
             'Hip Thrust': { sets: 3, reps: 8, weight: 135 },
@@ -249,13 +254,19 @@
             'Cable Crunch': { sets: 3, reps: 10, weight: 50 },
             'Skull Crushers': { sets: 3, reps: 10, weight: 50 },
             'Overhead Extension': { sets: 3, reps: 10, weight: 45 },
+            'DB Tricep Extension': { sets: 3, reps: 10, weight: 30 },
+            'Cable Tricep Pushdown': { sets: 3, reps: 10, weight: 50 },
             'Kickbacks': { sets: 3, reps: 10, weight: 20 },
             'Rope Pushdown': { sets: 3, reps: 10, weight: 50 },
             'Preacher Curl': { sets: 3, reps: 10, weight: 55 },
             'Incline Curl': { sets: 3, reps: 10, weight: 30 },
             'Concentration Curl': { sets: 3, reps: 10, weight: 25 },
             'Cable Curl': { sets: 3, reps: 10, weight: 45 },
+            'DB Curl': { sets: 3, reps: 10, weight: 30 },
+            'DB Hammer Curl': { sets: 3, reps: 10, weight: 30 },
             'Cable Lateral Raise': { sets: 3, reps: 10, weight: 15 },
+            'DB Lateral Raise': { sets: 3, reps: 10, weight: 20 },
+            'DB Shrugs': { sets: 3, reps: 12, weight: 50 },
             'Front Raises': { sets: 3, reps: 10, weight: 20 },
             'Upright Row': { sets: 3, reps: 10, weight: 65 },
             'Machine Shoulder Press': { sets: 3, reps: 10, weight: 60 },
@@ -266,6 +277,7 @@
             'Seated Calf Raise': { sets: 3, reps: 10, weight: 90 },
             'Donkey Calf Raise': { sets: 3, reps: 10, weight: 90 },
             'Cable Kickback': { sets: 3, reps: 10, weight: 20 },
+            'Cable Woodchop': { sets: 3, reps: 12, weight: 30 },
             'Plank': { sets: 3, reps: 0, weight: 0 },  // reps=0 means timed
             'Russian Twist': { sets: 3, reps: 15, weight: 25 },
             'Leg Raise': { sets: 3, reps: 12, weight: 0 },
@@ -548,8 +560,15 @@
             weightInput.disabled = true;
             repsInput.disabled = true;
             
-            // Add another set row
-            addSet(btn);
+            // Only auto-add next set row if this isn't the last set in the suggested protocol
+            const exerciseCard = btn.closest('[data-exercise]');
+            const exerciseName = exerciseCard ? exerciseCard.dataset.exercise : '';
+            const defaults = EXERCISE_DEFAULTS[exerciseName] || { sets: 3, reps: 10 };
+            const container = btn.closest('.sets-container');
+            const currentSetCount = container.querySelectorAll('.flex').length;
+            if (currentSetCount < defaults.sets) {
+                addSet(btn);
+            }
         }
         
         // Add a new set row
@@ -676,7 +695,17 @@
                 body: JSON.stringify({ action: 'logCardio', ...cardioEntry })
             }).catch(err => console.error('Cardio save error:', err));
             
-            alert(`Cardio logged: ${type} - ${distance || 0} mi in ${time} min`);
+            // Show logged summary instead of alert
+            const cardioSection = document.getElementById('cardio-type').closest('.bg-gray-800');
+            let loggedDiv = document.getElementById('cardio-logged');
+            if (!loggedDiv) {
+                loggedDiv = document.createElement('div');
+                loggedDiv.id = 'cardio-logged';
+                loggedDiv.className = 'mt-3 text-green-400 text-sm font-semibold';
+                cardioSection.appendChild(loggedDiv);
+            }
+            loggedDiv.textContent = `✓ Logged: ${type} — ${distance || 0} mi, ${time} min`;
+            
             document.getElementById('cardio-distance').value = '';
             document.getElementById('cardio-time').value = '';
         }
