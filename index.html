@@ -385,10 +385,10 @@
                 setsHTML += `
                     <div class="flex gap-2">
                         <div class="relative">
-                            <input type="number" value="${weightValue}" placeholder="${weightPlaceholder}" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight">
+                            <input type="number" value="${weightValue}" placeholder="${weightPlaceholder}" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight" oninput="cascadeSetValues(this, 'weight')">
                             ${lastData && lastData.suggestBump && i === 0 ? '<span class="absolute -top-4 left-0 text-[10px] text-green-400">↑+5</span>' : ''}
                         </div>
-                        <input type="number" value="${repValue}" placeholder="${repPlaceholder}" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps">
+                        <input type="number" value="${repValue}" placeholder="${repPlaceholder}" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps" oninput="cascadeSetValues(this, 'reps')">
                         <button onclick="logSet(this)" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
                         <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm">+ Set</button>
                     </div>`;
@@ -486,6 +486,21 @@
 
         function hideSwapModal() {
             document.getElementById('swap-modal').classList.add('hidden');
+        }
+
+        // Cascade: when you change weight/reps in one set, fill the rest
+        function cascadeSetValues(input, field) {
+            const exerciseCard = input.closest('[data-exercise]');
+            if (!exerciseCard) return;
+            const value = input.value;
+            const className = field === 'weight' ? '.set-weight' : '.set-reps';
+            const allInputs = exerciseCard.querySelectorAll(className);
+            allInputs.forEach(otherInput => {
+                // Only cascade to unfilled (empty or not-yet-logged) inputs
+                if (otherInput !== input && !otherInput.disabled && !otherInput.value) {
+                    otherInput.value = value;
+                }
+            });
         }
 
         // Add Exercise
