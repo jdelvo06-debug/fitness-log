@@ -202,6 +202,98 @@
             abs: ['Cable Crunch', 'Plank', 'Russian Twist', 'Leg Raise', 'Ab Wheel', 'Hanging Knee Raise', 'Mountain Climbers', 'Bicycle Crunch']
         };
 
+        // Exercise defaults: sets, reps, suggested starting weight (lbs)
+        // Categories: heavy compound (4x5), medium compound (3x8), isolation (3x10-12), bodyweight (3xMAX)
+        const EXERCISE_DEFAULTS = {
+            // Heavy compounds - 4x5
+            'Bench Press': { sets: 4, reps: 5, weight: 135 },
+            'Squat': { sets: 4, reps: 5, weight: 135 },
+            'Deadlift': { sets: 4, reps: 5, weight: 185 },
+            'OHP': { sets: 4, reps: 5, weight: 85 },
+            'Barbell Row': { sets: 4, reps: 5, weight: 115 },
+            'Close-Grip Bench': { sets: 4, reps: 5, weight: 95 },
+            'Front Squat': { sets: 4, reps: 5, weight: 95 },
+            // Medium compounds - 3x8
+            'Incline DB Press': { sets: 3, reps: 8, weight: 50 },
+            'Leg Press': { sets: 3, reps: 8, weight: 270 },
+            'Lat Pulldown': { sets: 3, reps: 8, weight: 100 },
+            'Seated Row': { sets: 3, reps: 8, weight: 100 },
+            'Romanian Deadlift': { sets: 3, reps: 8, weight: 135 },
+            'Lunges': { sets: 3, reps: 8, weight: 40 },
+            'T-Bar Row': { sets: 3, reps: 8, weight: 90 },
+            'Cable Row': { sets: 3, reps: 8, weight: 100 },
+            'Arnold Press': { sets: 3, reps: 8, weight: 35 },
+            'Stiff-Leg Deadlift': { sets: 3, reps: 8, weight: 135 },
+            'Hip Thrust': { sets: 3, reps: 8, weight: 135 },
+            'Step-ups': { sets: 3, reps: 8, weight: 30 },
+            'Good Mornings': { sets: 3, reps: 8, weight: 75 },
+            'Goblet Squat': { sets: 3, reps: 8, weight: 50 },
+            'Bulgarian Split Squat': { sets: 3, reps: 8, weight: 40 },
+            'Sumo Squat': { sets: 3, reps: 8, weight: 95 },
+            'Glute Bridge': { sets: 3, reps: 8, weight: 95 },
+            // Isolation - 3x10
+            'Cable Fly': { sets: 3, reps: 10, weight: 30 },
+            'Lateral Raises': { sets: 3, reps: 10, weight: 20 },
+            'Tricep Pushdown': { sets: 3, reps: 10, weight: 50 },
+            'Barbell Curl': { sets: 3, reps: 10, weight: 65 },
+            'Hammer Curl': { sets: 3, reps: 10, weight: 35 },
+            'Leg Extension': { sets: 3, reps: 10, weight: 90 },
+            'Leg Curl': { sets: 3, reps: 10, weight: 80 },
+            'Face Pulls': { sets: 3, reps: 10, weight: 30 },
+            'Cable Crunch': { sets: 3, reps: 10, weight: 50 },
+            'Skull Crushers': { sets: 3, reps: 10, weight: 50 },
+            'Overhead Extension': { sets: 3, reps: 10, weight: 45 },
+            'Kickbacks': { sets: 3, reps: 10, weight: 20 },
+            'Rope Pushdown': { sets: 3, reps: 10, weight: 50 },
+            'Preacher Curl': { sets: 3, reps: 10, weight: 55 },
+            'Incline Curl': { sets: 3, reps: 10, weight: 30 },
+            'Concentration Curl': { sets: 3, reps: 10, weight: 25 },
+            'Cable Curl': { sets: 3, reps: 10, weight: 45 },
+            'Cable Lateral Raise': { sets: 3, reps: 10, weight: 15 },
+            'Front Raises': { sets: 3, reps: 10, weight: 20 },
+            'Upright Row': { sets: 3, reps: 10, weight: 65 },
+            'Machine Shoulder Press': { sets: 3, reps: 10, weight: 60 },
+            'Machine Chest Press': { sets: 3, reps: 10, weight: 90 },
+            'Pec Deck': { sets: 3, reps: 10, weight: 60 },
+            'Reverse Fly': { sets: 3, reps: 10, weight: 25 },
+            'Standing Calf Raise': { sets: 3, reps: 10, weight: 135 },
+            'Seated Calf Raise': { sets: 3, reps: 10, weight: 90 },
+            'Donkey Calf Raise': { sets: 3, reps: 10, weight: 90 },
+            'Cable Kickback': { sets: 3, reps: 10, weight: 20 },
+            'Plank': { sets: 3, reps: 0, weight: 0 },  // reps=0 means timed
+            'Russian Twist': { sets: 3, reps: 15, weight: 25 },
+            'Leg Raise': { sets: 3, reps: 12, weight: 0 },
+            'Ab Wheel': { sets: 3, reps: 10, weight: 0 },
+            'Hanging Knee Raise': { sets: 3, reps: 12, weight: 0 },
+            'Mountain Climbers': { sets: 3, reps: 15, weight: 0 },
+            'Bicycle Crunch': { sets: 3, reps: 15, weight: 0 },
+            'Nordic Curl': { sets: 3, reps: 5, weight: 0 },
+            'Glute-Ham Raise': { sets: 3, reps: 8, weight: 0 },
+            'Decline Press': { sets: 3, reps: 8, weight: 115 },
+            '21s': { sets: 1, reps: 21, weight: 45 },  // special
+            // Bodyweight - 3xMAX
+            'Pull-ups': { sets: 3, reps: 0, weight: 0 },  // 0 reps = MAX
+            'Push-ups': { sets: 3, reps: 0, weight: 0 },
+            'Dips': { sets: 3, reps: 0, weight: 0 },
+            'Jump Rope': { sets: 3, reps: 0, weight: 0 },
+        };
+
+        // Get last logged data for an exercise from history
+        function getLastExerciseData(exerciseName) {
+            for (const workout of workoutHistory) {
+                for (const ex of workout.exercises) {
+                    if (ex.name === exerciseName && ex.sets.length) {
+                        // Check if all reps were hit last time (for progressive overload)
+                        const lastSet = ex.sets[ex.sets.length - 1];
+                        const allRepsHit = ex.sets.every(s => parseInt(s.reps) >= parseInt(s.reps));
+                        const suggestBump = allRepsHit;
+                        return { sets: ex.sets, suggestBump };
+                    }
+                }
+            }
+            return null;
+        }
+
         // Split to Muscle Groups
         const SPLIT_EXERCISES = {
             push: ['chest', 'shoulders', 'triceps'],
@@ -260,17 +352,78 @@
             renderExercises();
         }
 
+        // Build exercise card HTML with smart defaults
+        function buildExerciseHTML(exerciseName, idx) {
+            const defaults = EXERCISE_DEFAULTS[exerciseName] || { sets: 3, reps: 10, weight: 0 };
+            const lastData = getLastExerciseData(exerciseName);
+            const numSets = lastData ? Math.max(lastData.sets.length, defaults.sets) : defaults.sets;
+            const isMAX = defaults.reps === 0;
+            const repsLabel = isMAX ? 'MAX' : defaults.reps;
+            
+            // Build set rows
+            let setsHTML = '';
+            for (let i = 0; i < numSets; i++) {
+                let wVal, rVal;
+                if (lastData && lastData.sets[i]) {
+                    // Use previous workout data
+                    wVal = parseInt(lastData.sets[i].weight);
+                    rVal = parseInt(lastData.sets[i].reps);
+                    // Progressive overload: bump weight if all sets completed last time
+                    if (lastData.suggestBump && i === 0) {
+                        wVal += 5; // suggest +5lbs
+                    }
+                } else {
+                    wVal = defaults.weight;
+                    rVal = defaults.reps;
+                }
+                const isTimed = rVal === 0;
+                const repPlaceholder = isTimed ? 'sec' : 'reps';
+                const repValue = isTimed ? '' : (rVal || '');
+                const weightPlaceholder = wVal ? '' : 'lbs';
+                const weightValue = wVal || '';
+                
+                setsHTML += `
+                    <div class="flex gap-2">
+                        <div class="relative">
+                            <input type="number" value="${weightValue}" placeholder="${weightPlaceholder}" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight">
+                            ${lastData && lastData.suggestBump && i === 0 ? '<span class="absolute -top-4 left-0 text-[10px] text-green-400">↑+5</span>' : ''}
+                        </div>
+                        <input type="number" value="${repValue}" placeholder="${repPlaceholder}" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps">
+                        <button onclick="logSet(this)" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
+                        <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm">+ Set</button>
+                    </div>`;
+            }
+            
+            const groupTag = getGroupTag(exerciseName);
+            return `
+                <div class="bg-gray-700 rounded-lg p-4" data-exercise="${exerciseName}" data-index="${idx}">
+                    <div class="flex justify-between items-center mb-1">
+                        <div class="flex items-center gap-2">
+                            <h4 class="font-bold">${exerciseName}</h4>
+                            <span class="text-[10px] px-1.5 py-0.5 bg-gray-600 rounded text-gray-300">${groupTag}</span>
+                        </div>
+                        <button onclick="openSwapModal(${idx})" class="text-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500">↻ Swap</button>
+                    </div>
+                    <div class="text-xs text-gray-400 mb-2">${defaults.sets}×${repsLabel} ${lastData ? '(previous)' : '(suggested)'}${defaults.weight ? ' · ' + defaults.weight + 'lbs' : ''}</div>
+                    <div class="space-y-2 sets-container">
+                        ${setsHTML}
+                    </div>
+                </div>`;
+        }
+
+        function getGroupTag(exerciseName) {
+            for (const [group, exercises] of Object.entries(EXERCISES)) {
+                if (exercises.includes(exerciseName)) {
+                    const tags = { chest: 'Chest', back: 'Back', shoulders: 'Shoulders', triceps: 'Tri', biceps: 'Bi', quads: 'Quad', hamstrings: 'Ham', glutes: 'Glute', calves: 'Calf', abs: 'Abs' };
+                    return tags[group] || group;
+                }
+            }
+            return '';
+        }
+
         // Render Exercises
         function renderExercises() {
             const container = document.getElementById('exercises-list');
-            const muscleGroups = SPLIT_EXERCISES[currentSplit];
-            let exercises = [];
-            
-            muscleGroups.forEach(group => {
-                EXERCISES[group].forEach(ex => {
-                    exercises.push({ name: ex, group });
-                });
-            });
 
             // Default exercises for each split
             const defaults = {
@@ -280,22 +433,7 @@
                 legs: ['Squat', 'Leg Press', 'Romanian Deadlift', 'Leg Extension', 'Leg Curl', 'Standing Calf Raise', 'Cable Crunch']
             };
 
-            container.innerHTML = defaults[currentSplit].map((ex, idx) => `
-                <div class="bg-gray-700 rounded-lg p-4" data-exercise="${ex}" data-index="${idx}">
-                    <div class="flex justify-between items-center mb-3">
-                        <h4 class="font-bold">${ex}</h4>
-                        <button onclick="openSwapModal(${idx})" class="text-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500">↻ Swap</button>
-                    </div>
-                    <div class="space-y-2 sets-container">
-                        <div class="flex gap-2">
-                            <input type="number" placeholder="lbs" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight">
-                            <input type="number" placeholder="reps" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps">
-                            <button onclick="logSet(this)" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
-                            <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm">+ Set</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+            container.innerHTML = defaults[currentSplit].map((ex, idx) => buildExerciseHTML(ex, idx)).join('');
         }
 
         // Swap Modal
@@ -329,31 +467,19 @@
 
         function selectExercise(exercise) {
             if (currentSwapIndex === -1) {
-                // Adding new exercise
+                // Adding new exercise — use smart defaults
                 const container = document.getElementById('exercises-list');
-                const newDiv = document.createElement('div');
-                newDiv.className = 'bg-gray-700 rounded-lg p-4';
-                newDiv.setAttribute('data-exercise', exercise);
-                newDiv.innerHTML = `
-                    <div class="flex justify-between items-center mb-3">
-                        <h4 class="font-bold">${exercise}</h4>
-                        <button onclick="openSwapModal(${container.children.length})" class="text-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500">↻ Swap</button>
-                    </div>
-                    <div class="space-y-2 sets-container">
-                        <div class="flex gap-2">
-                            <input type="number" placeholder="lbs" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight">
-                            <input type="number" placeholder="reps" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps">
-                            <button onclick="logSet(this)" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
-                            <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm">+ Set</button>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(newDiv);
+                const idx = container.children.length;
+                const temp = document.createElement('div');
+                temp.innerHTML = buildExerciseHTML(exercise, idx);
+                container.appendChild(temp.firstElementChild);
             } else {
+                // Swapping — rebuild the card with smart defaults
                 const container = document.getElementById('exercises-list');
-                const exerciseEl = container.children[currentSwapIndex];
-                exerciseEl.setAttribute('data-exercise', exercise);
-                exerciseEl.querySelector('h4').textContent = exercise;
+                const idx = currentSwapIndex;
+                const temp = document.createElement('div');
+                temp.innerHTML = buildExerciseHTML(exercise, idx);
+                container.replaceChild(temp.firstElementChild, container.children[idx]);
             }
             hideSwapModal();
         }
@@ -391,11 +517,21 @@
         // Add a new set row
         function addSet(btn) {
             const container = btn.closest('.sets-container');
+            const prevRows = container.querySelectorAll('.flex:not(.exercise-header)');
+            let prevWeight = '', prevReps = '';
+            // Get values from previous set row if exists
+            const prevRow = btn.closest('.flex');
+            if (prevRow) {
+                const pw = prevRow.querySelector('.set-weight');
+                const pr = prevRow.querySelector('.set-reps');
+                if (pw && pw.value) prevWeight = pw.value;
+                if (pr && pr.value) prevReps = pr.value;
+            }
             const newRow = document.createElement('div');
             newRow.className = 'flex gap-2';
             newRow.innerHTML = `
-                <input type="number" placeholder="lbs" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight">
-                <input type="number" placeholder="reps" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps">
+                <input type="number" value="${prevWeight}" placeholder="lbs" class="w-20 bg-gray-600 rounded px-2 py-1 set-weight">
+                <input type="number" value="${prevReps}" placeholder="reps" class="w-16 bg-gray-600 rounded px-2 py-1 set-reps">
                 <button onclick="logSet(this)" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 text-sm">Log</button>
                 <button onclick="addSet(this)" class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500 text-sm">+ Set</button>
             `;
