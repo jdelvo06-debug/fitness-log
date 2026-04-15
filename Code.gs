@@ -27,6 +27,8 @@ function doPost(e) {
     return logWeight(data.date, data.weight);
   } else if (action === 'logWorkout') {
     return logWorkout(data.workout);
+  } else if (action === 'logCardio') {
+    return logCardio(data);
   }
   
   return ContentService.createTextOutput(JSON.stringify({error: 'Invalid action'}))
@@ -82,6 +84,27 @@ function getWorkouts() {
     })).filter(w => w.date);
     
     return ContentService.createTextOutput(JSON.stringify({workouts: workouts}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({error: error.message}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function logCardio(data) {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let sheet = ss.getSheetByName('Cardio');
+    
+    if (!sheet) {
+      sheet = ss.insertSheet('Cardio');
+      sheet.appendRow(['Date', 'Type', 'Distance', 'Time', 'Timestamp']);
+    }
+    
+    const timestamp = new Date().toISOString();
+    sheet.appendRow([data.date, data.type, data.distance, data.time, timestamp]);
+    
+    return ContentService.createTextOutput(JSON.stringify({success: true, timestamp}))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({error: error.message}))

@@ -291,7 +291,9 @@
                     if (ex.name === exerciseName && ex.sets.length) {
                         // Check if all reps were hit last time (for progressive overload)
                         const lastSet = ex.sets[ex.sets.length - 1];
-                        const allRepsHit = ex.sets.every(s => parseInt(s.reps) >= parseInt(s.reps));
+                        const defaults = EXERCISE_DEFAULTS[ex.name] || { reps: 10 };
+                        const targetReps = defaults.reps || 0;
+                        const allRepsHit = targetReps > 0 ? ex.sets.every(s => parseInt(s.reps) >= targetReps) : true;
                         const suggestBump = allRepsHit;
                         return { sets: ex.sets, suggestBump };
                     }
@@ -526,10 +528,10 @@
             const row = btn.closest('.flex');
             const weightInput = row.querySelector('.set-weight');
             const repsInput = row.querySelector('.set-reps');
-            const weight = weightInput.value;
-            const reps = repsInput.value;
+            const weightVal = weightInput.value;
+            const repsVal = repsInput.value;
             
-            if (!weight || !reps) return alert('Enter weight and reps');
+            if (weightVal === '' || !repsVal) return alert('Enter weight and reps');
             
             // Visual feedback
             btn.textContent = '✓';
@@ -630,7 +632,7 @@
                 const prev = weightEntries[i + 1];
                 const delta = prev ? (entry.weight - prev.weight).toFixed(1) : '—';
                 const deltaClass = delta > 0 ? 'text-red-400' : delta < 0 ? 'text-green-400' : 'text-gray-400';
-                const dateFmt = new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const dateFmt = new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                 return `
                     <div class="flex justify-between items-center py-2 border-b border-gray-700">
                         <span class="text-sm">${dateFmt}</span>
@@ -856,12 +858,19 @@
             const url = document.getElementById('apps-script-url').value;
             if (url) {
                 localStorage.setItem('appsScriptUrl', url);
+                APPS_SCRIPT_URL = url;
                 alert('Settings saved!');
                 hideSettings();
             }
         }
 
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx1F4KStHX9MuE2OmzUYs_LQDYkqLkZyjPM3P0zmtsutQxGB-OFJ1uNQZCYQWFaF5pc/exec';
+        let APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx1F4KStHX9MuE2OmzUYs_LQDYkqLkZyjPM3P0zmtsutQxGB-OFJ1uNQZCYQWFaF5pc/exec';
+        
+        // Override with saved URL if exists
+        (function() {
+            const saved = localStorage.getItem('appsScriptUrl');
+            if (saved) APPS_SCRIPT_URL = saved;
+        })();
         function saveToStorage() {
             localStorage.setItem('fitnessLogWeights', JSON.stringify(weightEntries));
             localStorage.setItem('fitnessLogHistory', JSON.stringify(workoutHistory));
