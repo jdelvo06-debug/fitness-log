@@ -364,6 +364,13 @@
             localStorage.setItem('fit_active_workout', JSON.stringify(session));
         }
 
+        // Force-save when app goes to background (iOS kills PWA pages aggressively)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && workoutStartTime) {
+                saveActiveWorkout();
+            }
+        });
+
         function clearActiveWorkout() {
             localStorage.removeItem('fit_active_workout');
         }
@@ -395,12 +402,17 @@
                 }
                 const titles = { push: '🫸 Push', pull: '🫷 Pull', upper: '💪 Upper', legs: '🦵 Legs' };
                 document.getElementById('split-title').textContent = `${titles[currentSplit]} EXERCISES`;
-                renderExercises();
-                // Restore exercise inputs
+                
+                // Rebuild exercises from saved data (not defaults) so swapped/added exercises survive
+                const container = document.getElementById('exercises-list');
+                container.innerHTML = '';
                 if (session.exercises && session.exercises.length) {
-                    session.exercises.forEach(ex => {
-                        const card = document.querySelector(`[data-exercise="${ex.name}"]`);
-                        if (!card) return;
+                    session.exercises.forEach((ex, idx) => {
+                        const temp = document.createElement('div');
+                        temp.innerHTML = buildExerciseHTML(ex.name, idx);
+                        const card = temp.firstElementChild;
+                        container.appendChild(card);
+                        // Restore set values
                         const rows = card.querySelectorAll('.sets-container .flex');
                         ex.sets.forEach((s, i) => {
                             if (i >= rows.length) return;
@@ -418,7 +430,10 @@
                             }
                         });
                     });
+                } else {
+                    renderExercises();
                 }
+                
                 // Restart workout timer
                 const timerEl = document.getElementById('workout-timer');
                 const elapsed = Math.floor((Date.now() - workoutStartTime) / 1000);
@@ -475,6 +490,12 @@
             document.addEventListener('focusin', (e) => {
                 if (e.target.tagName === 'INPUT' && e.target.type === 'number') {
                     setTimeout(() => e.target.select(), 10);
+                }
+            });
+            // Save on every keystroke in set inputs (iOS kills pages before 'change' fires)
+            document.addEventListener('input', (e) => {
+                if (e.target.classList.contains('set-weight') || e.target.classList.contains('set-reps')) {
+                    saveActiveWorkout();
                 }
             });
         });
