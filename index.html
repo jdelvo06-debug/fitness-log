@@ -200,7 +200,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // Supabase Client
-        let supabase;
+        let supabaseClient;
         let SUPABASE_URL = 'https://gnxreojfvrzmgpmjxaql.supabase.co';
         let SUPABASE_KEY = 'sb_publishable_oDYbcTd_jVD_r5fYZCg_bw_EeNiGwwy';
 
@@ -213,7 +213,7 @@
                 if (url && key && window.supabase && window.supabase.createClient) {
                     SUPABASE_URL = url;
                     SUPABASE_KEY = key;
-                    supabase = window.supabase.createClient(url, key);
+                    supabaseClient = window.supabase.createClient(url, key);
                     console.log('Supabase initialized');
                 } else {
                     console.warn('Supabase library not loaded yet, will retry on sync');
@@ -817,9 +817,9 @@
             saveToStorage();
 
             // Save to Supabase
-            if (supabase) {
+            if (supabaseClient) {
                 try {
-                    const { error } = await supabase.from('weights').upsert(
+                    const { error } = await supabaseClient.from('weights').upsert(
                         { date, weight },
                         { onConflict: 'date' }
                     );
@@ -895,8 +895,8 @@
             localStorage.setItem('fitnessLogCardio', JSON.stringify(cardioHistory));
             
             // Save to Supabase
-            if (supabase) {
-                supabase.from('cardio').insert({
+            if (supabaseClient) {
+                supabaseClient.from('cardio').insert({
                     date, type, distance: parseFloat(distance) || 0, duration: parseInt(time) || 0
                 }).then(({ error }) => {
                     if (error) console.error('Supabase cardio save error:', error);
@@ -1007,10 +1007,10 @@
                 saveToStorage();
 
                 // Save to Supabase
-                if (supabase) {
+                if (supabaseClient) {
                     try {
                         // Insert workout
-                        const { data: workoutRow, error: wError } = await supabase
+                        const { data: workoutRow, error: wError } = await supabaseClient
                             .from('workouts')
                             .insert({ date: workout.date, split: workout.split, duration: parseDuration(workout.duration) })
                             .select()
@@ -1025,7 +1025,7 @@
                             reps: parseInt(ex.sets[0]?.reps) || null,
                             weight: parseFloat(ex.sets[0]?.weight) || null
                         }));
-                        const { error: eError } = await supabase.from('exercises').insert(exerciseRows);
+                        const { error: eError } = await supabaseClient.from('exercises').insert(exerciseRows);
                         if (eError) console.error('Exercise insert error:', eError);
                         else console.log('Workout saved to Supabase');
                     } catch (err) {
@@ -1141,7 +1141,7 @@
                 SUPABASE_KEY = key;
                 localStorage.setItem('supabaseUrl', url);
                 localStorage.setItem('supabaseKey', key);
-                supabase = window.supabase.createClient(url, key);
+                supabaseClient = window.supabase.createClient(url, key);
                 alert('Supabase settings saved!');
                 hideSettings();
             } else {
@@ -1172,13 +1172,13 @@
 
         // Sync from Supabase
         async function syncData() {
-            if (!supabase) {
+            if (!supabaseClient) {
                 alert('⚠️ Supabase not configured. Go to Settings ⚙️ and enter your project URL and anon key.');
                 return;
             }
             try {
                 // Fetch weights
-                const { data: weightsData, error: wErr } = await supabase
+                const { data: weightsData, error: wErr } = await supabaseClient
                     .from('weights').select('*').order('date', { ascending: false });
                 if (wErr) throw wErr;
                 if (weightsData && weightsData.length) {
@@ -1195,7 +1195,7 @@
                 }
 
                 // Fetch workouts with exercises
-                const { data: workoutsData, error: wkErr } = await supabase
+                const { data: workoutsData, error: wkErr } = await supabaseClient
                     .from('workouts').select('*, exercises(*)').order('date', { ascending: false });
                 if (wkErr) throw wkErr;
                 if (workoutsData && workoutsData.length) {
