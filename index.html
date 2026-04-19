@@ -169,11 +169,15 @@
         <!-- Settings Modal -->
         <div id="settings-modal" class="hidden modal-overlay fixed inset-0 flex items-center justify-center z-50">
             <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-                <h2 class="text-xl font-bold mb-4">⚙️ Google Sheets Setup</h2>
-                <p class="text-sm text-gray-400 mb-4">Sheet ID: <code class="bg-gray-700 px-2 py-1 rounded">1jkder4DI5i4mswCMukwZI_KUfAXbnrb0Ghz_PrVsuyI</code></p>
+                <h2 class="text-xl font-bold mb-4">⚙️ Supabase Setup</h2>
+                <p class="text-sm text-gray-400 mb-4">Connect to your Supabase project to sync workout data.</p>
                 <div class="mb-4">
-                    <label class="block text-sm font-bold mb-2">Apps Script Web App URL</label>
-                    <input type="url" id="apps-script-url" placeholder="https://script.google.com/macros/s/..." class="w-full bg-gray-700 rounded px-3 py-2">
+                    <label class="block text-sm font-bold mb-2">Supabase Project URL</label>
+                    <input type="url" id="supabase-url" placeholder="https://xxxxx.supabase.co" class="w-full bg-gray-700 rounded px-3 py-2">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-bold mb-2">Supabase Anon Key</label>
+                    <input type="text" id="supabase-key" placeholder="eyJhbGciOiJIUzI1NiIs..." class="w-full bg-gray-700 rounded px-3 py-2">
                 </div>
                 <div class="flex gap-2">
                     <button onclick="saveSettings()" class="flex-1 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Save</button>
@@ -193,7 +197,25 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Supabase Client
+        let supabase;
+        let SUPABASE_URL = 'https://gnxreojfvrzmgpmjxaql.supabase.co';
+        let SUPABASE_KEY = 'sb_publishable_oDYbcTd_jVD_r5fYZCg_bw_EeNiGwwy';
+
+        function initSupabase() {
+            const savedUrl = localStorage.getItem('supabaseUrl');
+            const savedKey = localStorage.getItem('supabaseKey');
+            if (savedUrl && savedKey) {
+                SUPABASE_URL = savedUrl;
+                SUPABASE_KEY = savedKey;
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+        }
+
+        initSupabase();
+
         // Exercise Database by Muscle Group
         const EXERCISES = {
             chest: ['Bench Press', 'Incline DB Press', 'DB Press', 'DB Fly', 'DB Incline Press', 'Cable Fly', 'Push-ups', 'Dips', 'Decline Press', 'Machine Chest Press', 'Pec Deck'],
@@ -626,13 +648,17 @@
             renderWeightEntries();
             saveToStorage();
 
-            // Save to Google Sheets
-            fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                mode: 'no-cors',
-                body: JSON.stringify({ action: 'logWeight', date, weight })
-            }).then(() => console.log('Weight saved to Sheets')).catch(err => console.error('Sheets save error:', err));
+            // Save to Supabase
+            if (supabase) {
+                try {
+                    const { error } = await supabase.from('weights').upsert(
+                        { date, weight },
+                        { onConflict: 'date' }
+                    );
+                    if (error) console.error('Supabase weight save error:', error);
+                    else console.log('Weight saved to Supabase');
+                } catch (err) { console.error('Supabase error:', err); }
+            }
             
             updateToGo();
         }
@@ -700,13 +726,15 @@
             cardioHistory.unshift(cardioEntry);
             localStorage.setItem('fitnessLogCardio', JSON.stringify(cardioHistory));
             
-            // Save to Sheets
-            fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                mode: 'no-cors',
-                body: JSON.stringify({ action: 'logCardio', ...cardioEntry })
-            }).catch(err => console.error('Cardio save error:', err));
+            // Save to Supabase
+            if (supabase) {
+                supabase.from('cardio').insert({
+                    date, type, distance: parseFloat(distance) || 0, duration: parseInt(time) || 0
+                }).then(({ error }) => {
+                    if (error) console.error('Supabase cardio save error:', error);
+                    else console.log('Cardio saved to Supabase');
+                });
+            }
             
             // Show logged summary instead of alert
             const cardioSection = document.getElementById('cardio-type').closest('.bg-gray-800');
@@ -806,13 +834,32 @@
                 renderHistory();
                 saveToStorage();
 
-                // Save to Google Sheets
-                fetch(APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    mode: 'no-cors',
-                    body: JSON.stringify({ action: 'logWorkout', workout })
-                }).then(() => console.log('Workout saved to Sheets')).catch(err => console.error('Sheets save error:', err));
+                // Save to Supabase
+                if (supabase) {
+                    try {
+                        // Insert workout
+                        const { data: workoutRow, error: wError } = await supabase
+                            .from('workouts')
+                            .insert({ date: workout.date, split: workout.split, duration: parseDuration(workout.duration) })
+                            .select()
+                            .single();
+                        if (wError) throw wError;
+
+                        // Insert each exercise
+                        const exerciseRows = workout.exercises.map(ex => ({
+                            workout_id: workoutRow.id,
+                            name: ex.name,
+                            sets: ex.sets.length,
+                            reps: parseInt(ex.sets[0]?.reps) || null,
+                            weight: parseFloat(ex.sets[0]?.weight) || null
+                        }));
+                        const { error: eError } = await supabase.from('exercises').insert(exerciseRows);
+                        if (eError) console.error('Exercise insert error:', eError);
+                        else console.log('Workout saved to Supabase');
+                    } catch (err) {
+                        console.error('Supabase workout save error:', err);
+                    }
+                }
             }
 
             workoutStartTime = null;
@@ -896,9 +943,18 @@
             }).join('');
         }
 
+        // Duration helper
+        function parseDuration(dur) {
+            if (!dur) return null;
+            const parts = dur.split(':');
+            return parseInt(parts[0]) * 60 + parseInt(parts[1] || 0);
+        }
+
         // Settings
         function showSettings() {
             document.getElementById('settings-modal').classList.remove('hidden');
+            document.getElementById('supabase-url').value = SUPABASE_URL;
+            document.getElementById('supabase-key').value = SUPABASE_KEY;
         }
 
         function hideSettings() {
@@ -906,22 +962,20 @@
         }
 
         function saveSettings() {
-            const url = document.getElementById('apps-script-url').value;
-            if (url) {
-                localStorage.setItem('appsScriptUrl', url);
-                APPS_SCRIPT_URL = url;
-                alert('Settings saved!');
+            const url = document.getElementById('supabase-url').value.trim();
+            const key = document.getElementById('supabase-key').value.trim();
+            if (url && key) {
+                SUPABASE_URL = url;
+                SUPABASE_KEY = key;
+                localStorage.setItem('supabaseUrl', url);
+                localStorage.setItem('supabaseKey', key);
+                supabase = window.supabase.createClient(url, key);
+                alert('Supabase settings saved!');
                 hideSettings();
+            } else {
+                alert('Enter both URL and key.');
             }
         }
-
-        let APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx1F4KStHX9MuE2OmzUYs_LQDYkqLkZyjPM3P0zmtsutQxGB-OFJ1uNQZCYQWFaF5pc/exec';
-        
-        // Override with saved URL if exists
-        (function() {
-            const saved = localStorage.getItem('appsScriptUrl');
-            if (saved) APPS_SCRIPT_URL = saved;
-        })();
         function saveToStorage() {
             localStorage.setItem('fitnessLogWeights', JSON.stringify(weightEntries));
             localStorage.setItem('fitnessLogHistory', JSON.stringify(workoutHistory));
@@ -944,18 +998,21 @@
             renderRecovery();
         }
 
-        // Sync from Google Sheets
+        // Sync from Supabase
         async function syncData() {
-            const url = APPS_SCRIPT_URL;
+            if (!supabase) {
+                alert('⚠️ Supabase not configured. Go to Settings ⚙️ and enter your project URL and anon key.');
+                return;
+            }
             try {
                 // Fetch weights
-                const weightsRes = await fetch(`${url}?action=getWeights`);
-                const weightsData = await weightsRes.json();
-                if (weightsData.weights && weightsData.weights.length) {
-                    // Merge: keep local entries not already in cloud
-                    const cloudDates = new Set(weightsData.weights.map(w => w.date));
+                const { data: weightsData, error: wErr } = await supabase
+                    .from('weights').select('*').order('date', { ascending: false });
+                if (wErr) throw wErr;
+                if (weightsData && weightsData.length) {
+                    const cloudDates = new Set(weightsData.map(w => w.date));
                     const localOnly = weightEntries.filter(w => !cloudDates.has(w.date));
-                    weightEntries = [...localOnly, ...weightsData.weights];
+                    weightEntries = [...localOnly, ...weightsData.map(w => ({ date: w.date, weight: parseFloat(w.weight) }))];
                     weightEntries.sort((a, b) => b.date.localeCompare(a.date));
                     saveToStorage();
                     renderWeightEntries();
@@ -965,21 +1022,33 @@
                     }
                 }
 
-                // Fetch workouts
-                const workoutsRes = await fetch(`${url}?action=getWorkouts`);
-                const workoutsData = await workoutsRes.json();
-                if (workoutsData.workouts && workoutsData.workouts.length) {
-                    // Merge: keep local workouts not already in cloud
-                    const cloudWorkoutKeys = new Set(workoutsData.workouts.map(w => `${w.date}|${w.split}|${w.duration}`));
+                // Fetch workouts with exercises
+                const { data: workoutsData, error: wkErr } = await supabase
+                    .from('workouts').select('*, exercises(*)').order('date', { ascending: false });
+                if (wkErr) throw wkErr;
+                if (workoutsData && workoutsData.length) {
+                    const cloudWorkoutKeys = new Set(workoutsData.map(w => `${w.date}|${w.split}|${w.duration}`));
                     const localOnly = workoutHistory.filter(w => !cloudWorkoutKeys.has(`${w.date}|${w.split}|${w.duration}`));
-                    workoutHistory = [...localOnly, ...workoutsData.workouts];
+                    const mappedWorkouts = workoutsData.map(w => ({
+                        date: w.date,
+                        split: w.split,
+                        duration: w.duration ? `${Math.floor(w.duration / 60)}:${String(w.duration % 60).padStart(2, '0')}` : '0:00',
+                        exercises: (w.exercises || []).map(e => ({
+                            name: e.name,
+                            sets: Array.from({ length: e.sets || 0 }, (_, i) => ({
+                                weight: e.weight || 0,
+                                reps: e.reps || 0
+                            }))
+                        }))
+                    }));
+                    workoutHistory = [...localOnly, ...mappedWorkouts];
                     workoutHistory.sort((a, b) => b.date.localeCompare(a.date));
                     saveToStorage();
                     renderHistory();
                 }
 
-                    renderRecovery();
-                    alert('✅ Synced! ' + (weightsData.weights?.length || 0) + ' weight entries, ' + (workoutsData.workouts?.length || 0) + ' workouts loaded.');
+                renderRecovery();
+                alert('✅ Synced! ' + (weightsData?.length || 0) + ' weight entries, ' + (workoutsData?.length || 0) + ' workouts loaded.');
             } catch (err) {
                 console.error('Sync error:', err);
                 alert('❌ Sync failed: ' + err.message);
