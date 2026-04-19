@@ -205,16 +205,26 @@
         let SUPABASE_KEY = 'sb_publishable_oDYbcTd_jVD_r5fYZCg_bw_EeNiGwwy';
 
         function initSupabase() {
-            const savedUrl = localStorage.getItem('supabaseUrl');
-            const savedKey = localStorage.getItem('supabaseKey');
-            if (savedUrl && savedKey) {
-                SUPABASE_URL = savedUrl;
-                SUPABASE_KEY = savedKey;
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            try {
+                const savedUrl = localStorage.getItem('supabaseUrl');
+                const savedKey = localStorage.getItem('supabaseKey');
+                const url = savedUrl || SUPABASE_URL;
+                const key = savedKey || SUPABASE_KEY;
+                if (url && key && window.supabase && window.supabase.createClient) {
+                    SUPABASE_URL = url;
+                    SUPABASE_KEY = key;
+                    supabase = window.supabase.createClient(url, key);
+                    console.log('Supabase initialized');
+                } else {
+                    console.warn('Supabase library not loaded yet, will retry on sync');
+                }
+            } catch (err) {
+                console.error('Supabase init error:', err);
             }
         }
 
-        initSupabase();
+        // Initialize after DOM is ready
+        document.addEventListener('DOMContentLoaded', initSupabase);
 
         // Exercise Database by Muscle Group
         const EXERCISES = {
