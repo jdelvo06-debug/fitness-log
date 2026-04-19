@@ -1,4 +1,23 @@
-# Fitness Log v2 — Changelog
+# Fitness Log — Changelog
+
+## [2026-04-19] — Supabase Migration & Critical Bug Fixes
+
+### Backend Migration: Google Sheets → Supabase
+- Replaced Google Apps Script / Sheets backend with [Supabase](https://supabase.com)
+- Added Supabase JS CDN (`@supabase/supabase-js@2`, UMD build)
+- `initSupabase()` initializes client with hardcoded defaults on every load; overridable via Settings modal
+- `logWeight()` → upserts to `weights` table
+- `logCardio()` → inserts to `cardio` table
+- `endWorkout()` → inserts to `workouts` + `exercises` tables
+- `syncData()` → fetches all tables, merges with localStorage
+- Settings modal now configures Supabase URL + key (persisted to localStorage)
+
+### Bug Fixes
+- **Critical:** `let supabase` in inline script conflicted with `var supabase` declared by the Supabase CDN UMD build, causing `SyntaxError: Identifier 'supabase' has already been declared` — killed all JS execution (no exercises, no buttons). Fixed by renaming local client variable to `supabaseClient`.
+- **Critical:** `logWeight()` and `endWorkout()` used `await` without being declared `async`, causing a SyntaxError. Both functions are now `async`.
+- `initSupabase()` now always initializes with hardcoded defaults on first load (previously required credentials saved in localStorage)
+
+---
 
 ## [2026-04-14] v2.0 — Full Rebuild
 

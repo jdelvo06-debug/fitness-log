@@ -1,33 +1,42 @@
-# Fitness Log v2 — Project Documentation
+# Fitness Log — Project Documentation
 
 ## Overview
-A mobile-first, PWA-capable fitness tracking web app for logging workouts, weight, and recovery. Hosted on GitHub Pages with Google Sheets backend for data persistence.
+A mobile-first, PWA-capable fitness tracking web app for logging workouts, weight, and recovery. Hosted on GitHub Pages with Supabase cloud backend for data persistence and sync.
 
 ## Live URL
 **https://jdelvo06-debug.github.io/fitness-log/**
 
-> Append `?v=N` to bust cache after updates (e.g. `?v=11`)
-
 ## Repository
 - **GitHub:** `jdelvo06-debug/fitness-log`
-- **Branches:** `main` (source) → `gh-pages` (deployed)
-- **Local:** `/Users/jeremydelvaux/Projects/fitness-log/`
+- **Branch:** `gh-pages` (deployed directly — no separate source branch)
 - **Single file:** `index.html` (all HTML/CSS/JS in one file)
 - **PWA:** `manifest.json` (icons: `favicon.png`, `apple-touch-icon.png`, `icon.png`)
 
 ## Architecture
 - **Frontend:** Static HTML + Tailwind CSS (CDN) + vanilla JavaScript
-- **Backend:** Google Sheets via Apps Script Web App API
-- **Data storage:** localStorage (primary) + Google Sheets (sync/backup)
+- **Backend:** [Supabase](https://supabase.com) (PostgreSQL, REST API via `@supabase/supabase-js@2`)
+- **Data storage:** localStorage (primary) + Supabase (cloud sync/backup)
 - **No build step** — just push `index.html` to `gh-pages` branch
 
-## Google Sheets Integration
-- **Sheet ID:** `1jkder4DI5i4mswCMukwZI_KUfAXbnrb0Ghz_PrVsuyI`
-- **Apps Script URL:** `https://script.google.com/macros/s/AKfycbx1F4KStHX9MuE2OmzUYs_LQDYkqLkZyjPM3P0zmtsutQxGB-OFJ1uNQZCYQWFaF5pc/exec`
-- **Apps Script ID:** `AKfycbx1F4KStHX9MuE2OmzUYs_LQDYkqLkZyjPM3P0zmtsutQxGB-OFJ1uNQZCYQWFaF5pc`
-- **Code.gs:** Located in repo root (must be deployed manually to Apps Script)
-- **POST requests** use `mode: 'no-cors'` and `Content-Type: application/json`
-- **GET requests:** `?action=getWeights` and `?action=getWorkouts`
+## Supabase Integration
+- **Project URL:** `https://gnxreojfvrzmgpmjxaql.supabase.co`
+- **Credentials:** Hardcoded in `index.html` (`SUPABASE_URL` / `SUPABASE_KEY`). Overridable via Settings modal, persisted to localStorage.
+- **CDN:** `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2` (UMD build, exposes `window.supabase`)
+- **Client variable:** `supabaseClient` in inline script (distinct from `window.supabase` CDN global)
+
+### Tables
+| Table | Columns |
+|---|---|
+| `weights` | `id`, `date`, `weight` |
+| `workouts` | `id`, `date`, `split`, `duration` |
+| `exercises` | `id`, `workout_id`, `name`, `sets` (JSON) |
+| `cardio` | `id`, `date`, `type`, `distance`, `duration` |
+
+### Key Functions
+- `logWeight()` → upsert into `weights`
+- `logCardio()` → insert into `cardio`
+- `endWorkout()` → insert into `workouts` + `exercises`
+- `syncData()` → read from all tables, merge with localStorage
 
 ## Features (Current)
 ### Workout Tab
@@ -85,28 +94,27 @@ A mobile-first, PWA-capable fitness tracking web app for logging workouts, weigh
 - `fitnessLogHistory` — workout history array
 - `fitnessLogCardio` — cardio entries array
 - `fitnessLogTargetWeight` — target weight number
-- `appsScriptUrl` — custom Apps Script URL (override)
+- `supabaseUrl` — custom Supabase project URL (override)
+- `supabaseKey` — custom Supabase anon/publishable key (override)
 
 ## Deployment Process
 ```bash
-cd ~/Projects/fitness-log
+cd ~/projects/fitness-log
 git add -A
 git commit -m "description"
-git push origin main
-git checkout gh-pages
-git merge main
 git push origin gh-pages
-git checkout main
 ```
 
+> The `gh-pages` branch is the live deployment branch. Push directly to it.
+
 ## Known Issues / Future Work
-- [ ] Settings modal still shows URL field but URL is hardcoded (cosmetic only)
 - [ ] No offline support beyond localStorage (no Service Worker)
 - [ ] Dips appears in both triceps and chest exercise lists
 - [ ] Recovery tab could show a visual body heatmap
 - [ ] Could add progressive overload tracking (trends over time)
 - [ ] Could add workout notes per exercise
 - [ ] Cardio history not shown in UI (only stored)
+- [ ] `Code.gs` in repo root is legacy (Google Sheets era) — no longer used
 
 ## Change History
 See [CHANGELOG.md](./CHANGELOG.md)

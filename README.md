@@ -1,6 +1,6 @@
-# 💪 Fitness Log v2
+# 💪 Fitness Log
 
-Personal workout and weight tracking app with Google Sheets backend.
+Personal workout and weight tracking app with Supabase cloud backend.
 
 **🔗 Live App:** [jdelvo06-debug.github.io/fitness-log](https://jdelvo06-debug.github.io/fitness-log/)
 
@@ -17,31 +17,25 @@ Personal workout and weight tracking app with Google Sheets backend.
 - **Workout History** — View past sessions with delete support
 - **Muscle Recovery** — Color-coded grid showing recovery status by muscle group
 - **Cardio Warmup** — Log warmup jog/run/bike with distance and time
+- **Cloud Sync** — Sync all data to/from Supabase with one tap
 - **PWA** — Add to Home Screen for app-like experience
 
 ## Architecture
 
 - **Frontend:** Single `index.html` (HTML + Tailwind CSS + vanilla JS)
-- **Backend:** Google Sheets via Apps Script Web App API
-- **Hosting:** GitHub Pages (gh-pages branch)
-- **Data:** localStorage (primary) + Google Sheets (sync/backup)
+- **Backend:** [Supabase](https://supabase.com) (PostgreSQL + REST API)
+- **Hosting:** GitHub Pages (`gh-pages` branch)
+- **Data:** localStorage (primary) + Supabase (cloud sync/backup)
 
 ## Deployment
 
-### Frontend (GitHub Pages)
-
-Pushed automatically via `gh-pages` branch — any merge to `main` should be merged into `gh-pages` and pushed.
+Push changes directly to the `gh-pages` branch:
 
 ```bash
-git checkout gh-pages && git merge main && git push origin gh-pages && git checkout main
+git add -A
+git commit -m "description"
+git push origin gh-pages
 ```
-
-### Backend (Google Apps Script)
-
-1. Open [Apps Script](https://script.google.com)
-2. Copy `Code.gs` into the editor
-3. Deploy → New deployment → Web app → Execute as Me → Anyone
-4. Update `APPS_SCRIPT_URL` in `index.html` if the URL changes
 
 ## Documentation
 
