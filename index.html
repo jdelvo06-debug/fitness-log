@@ -803,7 +803,7 @@
         }
 
         // Weight Logging
-        function logWeight() {
+        async function logWeight() {
             const date = document.getElementById('weight-date').value;
             const weight = parseFloat(document.getElementById('weight-value').value);
             
@@ -975,7 +975,7 @@
             }, 1000);
         }
 
-        function endWorkout() {
+        async function endWorkout() {
             if (!workoutStartTime) return;
             if (!confirm('End workout and save?')) return;
             clearInterval(workoutTimerInterval);
