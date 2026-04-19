@@ -1008,29 +1008,8 @@
 
                 // Save to Supabase
                 if (supabaseClient) {
-                    try {
-                        // Insert workout
-                        const { data: workoutRow, error: wError } = await supabaseClient
-                            .from('workouts')
-                            .insert({ date: workout.date, split: workout.split, duration: parseDuration(workout.duration) })
-                            .select()
-                            .single();
-                        if (wError) throw wError;
-
-                        // Insert each exercise
-                        const exerciseRows = workout.exercises.map(ex => ({
-                            workout_id: workoutRow.id,
-                            name: ex.name,
-                            sets: ex.sets.length,
-                            reps: parseInt(ex.sets[0]?.reps) || null,
-                            weight: parseFloat(ex.sets[0]?.weight) || null
-                        }));
-                        const { error: eError } = await supabaseClient.from('exercises').insert(exerciseRows);
-                        if (eError) console.error('Exercise insert error:', eError);
-                        else console.log('Workout saved to Supabase');
-                    } catch (err) {
-                        console.error('Supabase workout save error:', err);
-                    }
+                    const saved = await pushWorkoutToSupabase(workout);
+                    if (!saved) alert('⚠️ Saved locally but failed to sync to cloud. Use Sync button later.');
                 }
             }
 
@@ -1170,6 +1149,30 @@
             renderRecovery();
         }
 
+        // Push one workout (+ its exercises) to Supabase. Returns true on success.
+        async function pushWorkoutToSupabase(workout) {
+            try {
+                const { data: row, error: wErr } = await supabaseClient
+                    .from('workouts')
+                    .insert({ date: workout.date, split: workout.split, duration: parseDuration(workout.duration) })
+                    .select().single();
+                if (wErr) throw wErr;
+                const exRows = workout.exercises.map(ex => ({
+                    workout_id: row.id,
+                    name: ex.name,
+                    sets: ex.sets.length,
+                    reps: parseInt(ex.sets[0]?.reps) || null,
+                    weight: parseFloat(ex.sets[0]?.weight) || null
+                }));
+                const { error: eErr } = await supabaseClient.from('exercises').insert(exRows);
+                if (eErr) console.error('Exercise insert error:', eErr);
+                return true;
+            } catch (err) {
+                console.error('Supabase workout save error:', err);
+                return false;
+            }
+        }
+
         // Sync from Supabase
         async function syncData() {
             if (!supabaseClient) {
@@ -1177,15 +1180,25 @@
                 return;
             }
             try {
-                // Fetch weights
-                const { data: weightsData, error: wErr } = await supabaseClient
+                // === WEIGHTS ===
+                const { data: cloudWeights, error: wErr } = await supabaseClient
                     .from('weights').select('*').order('date', { ascending: false });
                 if (wErr) throw wErr;
-                if (weightsData && weightsData.length) {
-                    const cloudDates = new Set(weightsData.map(w => w.date));
-                    const localOnly = weightEntries.filter(w => !cloudDates.has(w.date));
-                    weightEntries = [...localOnly, ...weightsData.map(w => ({ date: w.date, weight: parseFloat(w.weight) }))];
-                    weightEntries.sort((a, b) => b.date.localeCompare(a.date));
+
+                // Push local weights not already in cloud
+                const cloudWeightDates = new Set((cloudWeights || []).map(w => w.date));
+                const localOnlyWeights = weightEntries.filter(w => !cloudWeightDates.has(w.date));
+                if (localOnlyWeights.length) {
+                    const { error: pushErr } = await supabaseClient.from('weights')
+                        .insert(localOnlyWeights.map(w => ({ date: w.date, weight: w.weight })));
+                    if (pushErr) console.error('Push weights error:', pushErr);
+                }
+
+                // Merge weights
+                if (cloudWeights && cloudWeights.length) {
+                    const merged = [...localOnlyWeights, ...cloudWeights.map(w => ({ date: w.date, weight: parseFloat(w.weight) }))];
+                    merged.sort((a, b) => b.date.localeCompare(a.date));
+                    weightEntries = merged;
                     saveToStorage();
                     renderWeightEntries();
                     if (weightEntries.length) {
@@ -1194,33 +1207,46 @@
                     }
                 }
 
-                // Fetch workouts with exercises
-                const { data: workoutsData, error: wkErr } = await supabaseClient
+                // === WORKOUTS ===
+                const { data: cloudWorkouts, error: wkErr } = await supabaseClient
                     .from('workouts').select('*, exercises(*)').order('date', { ascending: false });
                 if (wkErr) throw wkErr;
-                if (workoutsData && workoutsData.length) {
-                    const cloudWorkoutKeys = new Set(workoutsData.map(w => `${w.date}|${w.split}|${w.duration}`));
-                    const localOnly = workoutHistory.filter(w => !cloudWorkoutKeys.has(`${w.date}|${w.split}|${w.duration}`));
-                    const mappedWorkouts = workoutsData.map(w => ({
+
+                // Push local workouts not already in cloud (compare by date+split+duration_seconds)
+                const cloudKeys = new Set((cloudWorkouts || []).map(w => `${w.date}|${w.split}|${w.duration}`));
+                const localOnlyWorkouts = workoutHistory.filter(w =>
+                    !cloudKeys.has(`${w.date}|${w.split}|${parseDuration(w.duration)}`)
+                );
+                for (const workout of localOnlyWorkouts) {
+                    await pushWorkoutToSupabase(workout);
+                }
+
+                // Re-fetch after push to get authoritative cloud state
+                const { data: finalWorkouts, error: fErr } = await supabaseClient
+                    .from('workouts').select('*, exercises(*)').order('date', { ascending: false });
+                if (fErr) throw fErr;
+
+                if (finalWorkouts && finalWorkouts.length) {
+                    workoutHistory = finalWorkouts.map(w => ({
                         date: w.date,
                         split: w.split,
                         duration: w.duration ? `${Math.floor(w.duration / 60)}:${String(w.duration % 60).padStart(2, '0')}` : '0:00',
                         exercises: (w.exercises || []).map(e => ({
                             name: e.name,
-                            sets: Array.from({ length: e.sets || 0 }, (_, i) => ({
+                            sets: Array.from({ length: e.sets || 0 }, () => ({
                                 weight: e.weight || 0,
                                 reps: e.reps || 0
                             }))
                         }))
                     }));
-                    workoutHistory = [...localOnly, ...mappedWorkouts];
                     workoutHistory.sort((a, b) => b.date.localeCompare(a.date));
                     saveToStorage();
                     renderHistory();
                 }
 
                 renderRecovery();
-                alert('✅ Synced! ' + (weightsData?.length || 0) + ' weight entries, ' + (workoutsData?.length || 0) + ' workouts loaded.');
+                const pushedMsg = localOnlyWorkouts.length ? ` (${localOnlyWorkouts.length} uploaded)` : '';
+                alert(`✅ Synced! ${(cloudWeights || []).length} weight entries, ${(finalWorkouts || []).length} workouts${pushedMsg}.`);
             } catch (err) {
                 console.error('Sync error:', err);
                 alert('❌ Sync failed: ' + err.message);
