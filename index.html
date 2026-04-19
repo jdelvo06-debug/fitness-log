@@ -354,6 +354,147 @@
         let targetWeight = 165;
         let restTimerInterval = null;
         let restTimeLeft = 0;
+        let _autosaveInterval = null;
+
+        // ═══════════════════════════════════════
+        // ACTIVE WORKOUT SESSION PERSISTENCE
+        // ═══════════════════════════════════════
+        function saveActiveWorkout() {
+            if (!workoutStartTime) return;
+            // Read all current exercise inputs from the DOM
+            const exercises = [];
+            document.querySelectorAll('#exercises-list > div[data-exercise]').forEach(div => {
+                const name = div.getAttribute('data-exercise');
+                const sets = [];
+                div.querySelectorAll('.sets-container .flex.set-row, .sets-container .flex').forEach(row => {
+                    const wInput = row.querySelector('.set-weight');
+                    const rInput = row.querySelector('.set-reps');
+                    if (!wInput || !rInput) return;
+                    sets.push({
+                        weight: wInput.value,
+                        reps: rInput.value,
+                        logged: wInput.disabled || row.querySelector('button.bg-green-600') !== null
+                    });
+                });
+                if (sets.length) exercises.push({ name, sets });
+            });
+            const session = {
+                split: currentSplit,
+                startTime: workoutStartTime,
+                exercises
+            };
+            localStorage.setItem('fit_active_workout', JSON.stringify(session));
+        }
+
+        // Force-save when app goes to background (iOS kills PWA pages aggressively)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && workoutStartTime) {
+                saveActiveWorkout();
+            }
+        });
+
+        function clearActiveWorkout() {
+            localStorage.removeItem('fit_active_workout');
+        }
+
+        function restoreActiveWorkout() {
+            const raw = localStorage.getItem('fit_active_workout');
+            if (!raw) return false;
+            try {
+                const session = JSON.parse(raw);
+                // Only restore if from today
+                const today = new Date().toISOString().split('T')[0];
+                if (!session.startTime) { clearActiveWorkout(); return false; }
+                // Check if older than 6 hours (stale)
+                if (Date.now() - session.startTime > 6 * 60 * 60 * 1000) {
+                    clearActiveWorkout();
+                    return false;
+                }
+                currentSplit = session.split || 'push';
+                workoutStartTime = session.startTime;
+                // Restore split UI
+                document.querySelectorAll('.split-btn').forEach(btn => {
+                    btn.classList.remove('bg-blue-600');
+                    btn.classList.add('bg-gray-700');
+                });
+                const activeBtn = document.querySelector(`button[onclick="selectSplit('${currentSplit}')"]`);
+                if (activeBtn) {
+                    activeBtn.classList.remove('bg-gray-700');
+                    activeBtn.classList.add('bg-blue-600');
+                }
+                const titles = { push: '🫸 Push', pull: '🫷 Pull', upper: '💪 Upper', legs: '🦵 Legs' };
+                document.getElementById('split-title').textContent = `${titles[currentSplit]} EXERCISES`;
+                
+                // Rebuild exercises from saved data (not defaults) so swapped/added exercises survive
+                const container = document.getElementById('exercises-list');
+                container.innerHTML = '';
+                if (session.exercises && session.exercises.length) {
+                    session.exercises.forEach((ex, idx) => {
+                        const temp = document.createElement('div');
+                        temp.innerHTML = buildExerciseHTML(ex.name, idx);
+                        const card = temp.firstElementChild;
+                        container.appendChild(card);
+                        // Restore set values
+                        const rows = card.querySelectorAll('.sets-container .flex');
+                        ex.sets.forEach((s, i) => {
+                            if (i >= rows.length) return;
+                            const wInput = rows[i].querySelector('.set-weight');
+                            const rInput = rows[i].querySelector('.set-reps');
+                            const logBtn = rows[i].querySelector('button[onclick*="logSet"]');
+                            if (wInput && s.weight) wInput.value = s.weight;
+                            if (rInput && s.reps) rInput.value = s.reps;
+                            if (s.logged && logBtn) {
+                                logBtn.textContent = '✓';
+                                logBtn.classList.remove('bg-blue-600');
+                                logBtn.classList.add('bg-green-600');
+                                if (wInput) wInput.disabled = true;
+                                if (rInput) rInput.disabled = true;
+                            }
+                        });
+                    });
+                } else {
+                    renderExercises();
+                }
+                
+                // Restart workout timer
+                const timerEl = document.getElementById('workout-timer');
+                const elapsed = Math.floor((Date.now() - workoutStartTime) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = elapsed % 60;
+                if (timerEl) timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                workoutTimerInterval = setInterval(() => {
+                    const e = Math.floor((Date.now() - workoutStartTime) / 1000);
+                    const m = Math.floor(e / 60);
+                    const s = e % 60;
+                    document.getElementById('workout-timer').textContent = `${m}:${s.toString().padStart(2, '0')}`;
+                }, 1000);
+                // Start autosave
+                _startAutosave();
+                return true;
+            } catch(e) { clearActiveWorkout(); return false; }
+        }
+
+        function _startAutosave() {
+            if (_autosaveInterval) clearInterval(_autosaveInterval);
+            _autosaveInterval = setInterval(saveActiveWorkout, 15000);
+        }
+
+        function _stopAutosave() {
+            if (_autosaveInterval) { clearInterval(_autosaveInterval); _autosaveInterval = null; }
+        }
+
+        // bfcache restore handler
+        window.addEventListener('pageshow', (e) => {
+            if (e.persisted && workoutStartTime) {
+                // Page was restored from bfcache — re-render timer
+                const elapsed = Math.floor((Date.now() - workoutStartTime) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = elapsed % 60;
+                const timerEl = document.getElementById('workout-timer');
+                if (timerEl) timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                saveActiveWorkout();
+            }
+        });
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
@@ -364,11 +505,19 @@
             document.getElementById('target-weight-input').value = targetWeight;
             loadFromStorage();
             updateToGo();
-            renderExercises();
+            // Restore active workout BEFORE rendering exercises
+            const restored = restoreActiveWorkout();
+            if (!restored) renderExercises();
             // Auto-select number inputs on tap + use numeric keypad
             document.addEventListener('focusin', (e) => {
                 if (e.target.tagName === 'INPUT' && e.target.type === 'number') {
                     setTimeout(() => e.target.select(), 10);
+                }
+            });
+            // Save on every keystroke in set inputs (iOS kills pages before 'change' fires)
+            document.addEventListener('input', (e) => {
+                if (e.target.classList.contains('set-weight') || e.target.classList.contains('set-reps')) {
+                    saveActiveWorkout();
                 }
             });
         });
@@ -542,6 +691,7 @@
                 container.replaceChild(temp.firstElementChild, container.children[idx]);
             }
             hideSwapModal();
+            saveActiveWorkout();
         }
 
         function hideSwapModal() {
@@ -594,6 +744,7 @@
             btn.classList.add('bg-green-600');
             weightInput.disabled = true;
             repsInput.disabled = true;
+            saveActiveWorkout();
             
             // Only auto-add next set row if this isn't the last set in the suggested protocol
             const exerciseCard = btn.closest('[data-exercise]');
@@ -607,6 +758,13 @@
         }
         
         // Add a new set row
+        // Input change autosave
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('set-weight') || e.target.classList.contains('set-reps')) {
+                saveActiveWorkout();
+            }
+        });
+
         function addSet(btn) {
             const container = btn.closest('.sets-container');
             let prevWeight = '', prevReps = '';
@@ -797,6 +955,8 @@
         function startWorkout() {
             if (workoutStartTime) return;
             workoutStartTime = Date.now();
+            saveActiveWorkout();
+            _startAutosave();
             workoutTimerInterval = setInterval(() => {
                 const elapsed = Math.floor((Date.now() - workoutStartTime) / 1000);
                 const mins = Math.floor(elapsed / 60);
@@ -809,6 +969,8 @@
             if (!workoutStartTime) return;
             if (!confirm('End workout and save?')) return;
             clearInterval(workoutTimerInterval);
+            _stopAutosave();
+            clearActiveWorkout();
             
             const duration = document.getElementById('workout-timer').textContent;
             const exercises = [];
